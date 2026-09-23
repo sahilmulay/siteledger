@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#1e40af"/>
+  <!-- Hard hat shape -->
+  <ellipse cx="256" cy="210" rx="160" ry="30" fill="#fbbf24"/>
+  <path d="M140 210 Q100 200 96 240 H416 Q412 200 372 210 Q330 130 256 120 Q182 130 140 210Z" fill="#fbbf24"/>
+  <!-- Brim -->
+  <rect x="70" y="230" width="372" height="22" rx="11" fill="#f59e0b"/>
+  <!-- S letter -->
+  <text x="256" y="380" font-family="Arial,sans-serif" font-size="140" font-weight="bold" fill="white" text-anchor="middle">S</text>
+</svg>
