@@ -38,14 +38,12 @@ export function Settings() {
   // Vendor state
   const [vendorName, setVendorName] = useState('')
   const [vendorMobile, setVendorMobile] = useState('')
-  const [vendorCategory, setVendorCategory] = useState('')
   const [savingVendor, setSavingVendor] = useState(false)
 
   // Edit Vendor state
   const [editingVendor, setEditingVendor] = useState(null)
   const [editVendorName, setEditVendorName] = useState('')
   const [editVendorMobile, setEditVendorMobile] = useState('')
-  const [editVendorCategory, setEditVendorCategory] = useState('')
   const [savingEditVendor, setSavingEditVendor] = useState(false)
 
   // Category state
@@ -290,14 +288,12 @@ export function Settings() {
       const newVendor = {
         id: Date.now().toString(),
         name: vendorName.trim(),
-        mobile: cleanMobile.slice(-10),
-        category: vendorCategory || ''
+        mobile: cleanMobile.slice(-10)
       }
       const updated = [...(vendors || []), newVendor]
       await updateVendors(updated)
       setVendorName('')
       setVendorMobile('')
-      setVendorCategory('')
       toast.success('Vendor added!')
     } catch (err) {
       toast.error('Failed to add vendor')
@@ -310,7 +306,6 @@ export function Settings() {
     setEditingVendor(v)
     setEditVendorName(v.name || '')
     setEditVendorMobile(v.mobile || '')
-    setEditVendorCategory(v.category || '')
   }
 
   const handlePickContactForEdit = async () => {
@@ -356,8 +351,7 @@ export function Settings() {
           return {
             ...v,
             name: editVendorName.trim(),
-            mobile: cleanMobile.slice(-10),
-            category: editVendorCategory || ''
+            mobile: cleanMobile.slice(-10)
           }
         }
         return v
@@ -554,16 +548,8 @@ export function Settings() {
               </div>
             </div>
 
-            <div className="flex gap-2 items-center">
-              <select
-                value={vendorCategory}
-                onChange={e => setVendorCategory(e.target.value)}
-                className="flex-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="">Default Category (Optional)</option>
-                {Object.keys(categories || {}).map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <Button type="submit" size="sm" loading={savingVendor} className="gap-1 flex-shrink-0">
+            <div className="flex justify-end">
+              <Button type="submit" size="sm" loading={savingVendor} className="gap-1">
                 <Plus className="h-4 w-4" /> Save Vendor
               </Button>
             </div>
@@ -578,16 +564,11 @@ export function Settings() {
                 <div key={v.id} className="flex items-center justify-between p-2.5 bg-white border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-800 truncate">{v.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      {v.mobile && (
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-gray-400" /> {v.mobile}
-                        </span>
-                      )}
-                      {v.category && (
-                        <Badge color="blue">{v.category}</Badge>
-                      )}
-                    </div>
+                    {v.mobile && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <Phone className="h-3 w-3 text-gray-400" /> {v.mobile}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -861,18 +842,6 @@ export function Settings() {
                   placeholder="e.g. 9876543210"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                 />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 block mb-1">Default Category</label>
-                <select
-                  value={editVendorCategory}
-                  onChange={e => setEditVendorCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                >
-                  <option value="">No Default Category</option>
-                  {Object.keys(categories || {}).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
               </div>
 
               <div className="flex gap-2 pt-2">

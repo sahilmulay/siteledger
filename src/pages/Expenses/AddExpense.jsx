@@ -71,9 +71,6 @@ export function AddExpense() {
     if (v) {
       setValue('vendor_name', v.name)
       if (v.mobile) setValue('vendor_mobile', v.mobile)
-      if (v.category && categories[v.category]) {
-        setValue('category', v.category)
-      }
     }
   }
 
@@ -216,7 +213,7 @@ export function AddExpense() {
                       <option value="">-- Choose from saved directory --</option>
                       {vendors.map(v => (
                         <option key={v.id} value={v.id}>
-                          {v.name} {v.mobile ? `(${v.mobile})` : ''} {v.category ? `• ${v.category}` : ''}
+                          {v.name} {v.mobile ? `(${v.mobile})` : ''}
                         </option>
                       ))}
                     </select>
