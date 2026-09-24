@@ -152,16 +152,14 @@ export function ExpenseList() {
 
   // Format WhatsApp message
   const formatWhatsAppMessage = (item) => {
-    const vRef = item.transaction_reference || ('SL-' + (item.id ? item.id.slice(0, 8).toUpperCase() : 'REC'))
-    return `*PAYMENT VOUCHER / RECEIPT*
+    return `*PAYMENT BILL*
 ━━━━━━━━━━━━━━━━━━━━
 *From:* ${firmName || 'SiteLedger'}
 *Project:* ${project?.project_name || 'Project'} (${project?.project_code || '—'})
 *Date:* ${formatDate(item.expense_date)}
-*Voucher Ref:* ${vRef}
 
 *Paid To:* ${item.vendor_name || 'Vendor'}
-*Amount Paid:* Rs. ${Number(item.amount).toLocaleString('en-IN')}
+*Total Paid:* Rs. ${Number(item.amount).toLocaleString('en-IN')}
 *Payment Mode:* ${item.payment_mode}
 *Category:* ${item.category}${item.sub_category ? ` (${item.sub_category})` : ''}
 ${item.remarks ? `*Remarks:* ${item.remarks}\n` : ''}${item.bill_number ? `*Bill No:* ${item.bill_number}\n` : ''}━━━━━━━━━━━━━━━━━━━━
@@ -183,20 +181,20 @@ Thank you!`
     toast.success('Opening WhatsApp with payment receipt...')
   }
 
-  // Download single-expense payment voucher PDF
+  // Download single-expense Payment Bill PDF
   const handleDownloadVoucher = async (item) => {
     try {
-      toast.loading('Generating voucher...', { id: 'voucher-toast' })
+      toast.loading('Generating bill...', { id: 'voucher-toast' })
       await generateSingleExpenseVoucherPDF({
         project,
         expense: item,
         firmName,
         save: true
       })
-      toast.success('Payment Voucher PDF downloaded!', { id: 'voucher-toast' })
+      toast.success('Payment Bill PDF downloaded!', { id: 'voucher-toast' })
     } catch (err) {
       console.error(err)
-      toast.error('Failed to generate voucher PDF', { id: 'voucher-toast' })
+      toast.error('Failed to generate bill PDF', { id: 'voucher-toast' })
     }
   }
 
@@ -405,10 +403,10 @@ Thank you!`
                       <button
                         onClick={() => handleDownloadVoucher(item)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
-                        title="Download Payment Voucher PDF"
+                        title="Download Payment Bill PDF"
                       >
                         <FileText className="h-3.5 w-3.5 text-gray-500" />
-                        <span>Voucher PDF</span>
+                        <span>Bill PDF</span>
                       </button>
                     </div>
 
