@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Upload, X, Image, Users } from 'lucide-react'
+import { Upload, X, Image, Users, BookUser } from 'lucide-react'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -35,6 +35,34 @@ export function AddExpense() {
   })
 
   const watchCategory = watch('category')
+
+  const handlePickContact = async () => {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+      toast((t) => (
+        <span className="text-xs">
+          Contact Picker is supported on mobile devices (Android Chrome/PWA). You can enter vendor details directly below.
+        </span>
+      ), { duration: 4500, icon: '📱' })
+      return
+    }
+    try {
+      const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false })
+      if (contacts && contacts.length > 0) {
+        const contact = contacts[0]
+        const name = Array.isArray(contact.name) ? (contact.name[0] || '') : (contact.name || '')
+        const tel = Array.isArray(contact.tel) ? (contact.tel[0] || '') : (contact.tel || '')
+        const cleanMobile = tel.replace(/\D/g, '').slice(-10)
+
+        if (name) setValue('vendor_name', name)
+        if (cleanMobile) setValue('vendor_mobile', cleanMobile)
+        toast.success(`Imported ${name || 'contact'}!`)
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        toast.error('Could not access contacts: ' + (err.message || 'Permission denied'))
+      }
+    }
+  }
 
   const handleSelectSavedVendor = (e) => {
     const selectedId = e.target.value
@@ -157,27 +185,44 @@ export function AddExpense() {
                 </Select>
               )}
 
-              {/* Pre-Loaded Vendor Selection */}
-              {vendors && vendors.length > 0 && (
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1 flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5 text-blue-600" />
-                    Quick Pick Saved Vendor
-                  </label>
-                  <select
-                    onChange={handleSelectSavedVendor}
-                    defaultValue=""
-                    className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
+              {/* Pre-Loaded Vendor Selection & Contacts */}
+              <div className="space-y-2 pt-1 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Vendor / Worker Details
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handlePickContact}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                    title="Pick vendor from device contact book"
                   >
-                    <option value="">-- Choose from saved directory --</option>
-                    {vendors.map(v => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} {v.mobile ? `(${v.mobile})` : ''} {v.category ? `• ${v.category}` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    <BookUser className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Pick from Contacts</span>
+                  </button>
                 </div>
-              )}
+
+                {vendors && vendors.length > 0 && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1 flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5 text-blue-600" />
+                      Quick Pick Saved Vendor
+                    </label>
+                    <select
+                      onChange={handleSelectSavedVendor}
+                      defaultValue=""
+                      className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
+                    >
+                      <option value="">-- Choose from saved directory --</option>
+                      {vendors.map(v => (
+                        <option key={v.id} value={v.id}>
+                          {v.name} {v.mobile ? `(${v.mobile})` : ''} {v.category ? `• ${v.category}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
 
               <Input
                 label="Vendor / Worker Name"

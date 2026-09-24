@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LogOut, User, HardHat, Shield, Building2, Save,
-  Plus, Trash2, X, Phone, Tag, RotateCcw, ChevronDown, ChevronUp, Users
+  Plus, Trash2, X, Phone, Tag, RotateCcw, ChevronDown, ChevronUp, Users,
+  BookUser, Edit2
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -39,6 +40,13 @@ export function Settings() {
   const [vendorCategory, setVendorCategory] = useState('')
   const [savingVendor, setSavingVendor] = useState(false)
 
+  // Edit Vendor state
+  const [editingVendor, setEditingVendor] = useState(null)
+  const [editVendorName, setEditVendorName] = useState('')
+  const [editVendorMobile, setEditVendorMobile] = useState('')
+  const [editVendorCategory, setEditVendorCategory] = useState('')
+  const [savingEditVendor, setSavingEditVendor] = useState(false)
+
   // Category state
   const [newCatName, setNewCatName] = useState('')
   const [activeSubInput, setActiveSubInput] = useState(null)
@@ -68,6 +76,36 @@ export function Settings() {
   }
 
   // --- Vendor Handlers ---
+  const handlePickContactForNew = async () => {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+      toast((t) => (
+        <div className="text-xs">
+          <p className="font-semibold text-gray-800 mb-0.5">Contact Book Access</p>
+          <p className="text-gray-500">Contact Picker is supported on mobile devices (Android Chrome/Edge/PWA). On other devices, please enter the name and phone number directly.</p>
+        </div>
+      ), { duration: 5000, icon: '📱' })
+      return
+    }
+    try {
+      const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false })
+      if (contacts && contacts.length > 0) {
+        const contact = contacts[0]
+        const name = Array.isArray(contact.name) ? (contact.name[0] || '') : (contact.name || '')
+        const tel = Array.isArray(contact.tel) ? (contact.tel[0] || '') : (contact.tel || '')
+        const cleanMobile = tel.replace(/\D/g, '').slice(-10)
+
+        if (name) setVendorName(name)
+        if (cleanMobile) setVendorMobile(cleanMobile)
+        toast.success(`Fetched ${name || 'contact'}! You can edit the details below before saving.`)
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error(err)
+        toast.error('Failed to open contacts: ' + (err.message || 'Permission denied'))
+      }
+    }
+  }
+
   const handleAddVendor = async (e) => {
     e.preventDefault()
     if (!vendorName.trim()) {
@@ -99,6 +137,72 @@ export function Settings() {
       toast.error('Failed to add vendor')
     } finally {
       setSavingVendor(false)
+    }
+  }
+
+  const openEditVendor = (v) => {
+    setEditingVendor(v)
+    setEditVendorName(v.name || '')
+    setEditVendorMobile(v.mobile || '')
+    setEditVendorCategory(v.category || '')
+  }
+
+  const handlePickContactForEdit = async () => {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+      toast('Contact Picker is supported on mobile devices (Android Chrome/PWA).', { icon: '📱' })
+      return
+    }
+    try {
+      const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false })
+      if (contacts && contacts.length > 0) {
+        const contact = contacts[0]
+        const name = Array.isArray(contact.name) ? (contact.name[0] || '') : (contact.name || '')
+        const tel = Array.isArray(contact.tel) ? (contact.tel[0] || '') : (contact.tel || '')
+        const cleanMobile = tel.replace(/\D/g, '').slice(-10)
+
+        if (name) setEditVendorName(name)
+        if (cleanMobile) setEditVendorMobile(cleanMobile)
+        toast.success('Contact info fetched!')
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        toast.error('Failed to access contacts')
+      }
+    }
+  }
+
+  const handleUpdateVendor = async (e) => {
+    e.preventDefault()
+    if (!editVendorName.trim()) {
+      toast.error('Vendor name is required')
+      return
+    }
+    const cleanMobile = editVendorMobile.replace(/\D/g, '')
+    if (editVendorMobile && cleanMobile.length !== 10 && !(cleanMobile.length === 12 && cleanMobile.startsWith('91'))) {
+      toast.error('Enter a valid 10-digit mobile number')
+      return
+    }
+
+    setSavingEditVendor(true)
+    try {
+      const updated = vendors.map(v => {
+        if (v.id === editingVendor.id) {
+          return {
+            ...v,
+            name: editVendorName.trim(),
+            mobile: cleanMobile.slice(-10),
+            category: editVendorCategory || ''
+          }
+        }
+        return v
+      })
+      await updateVendors(updated)
+      setEditingVendor(null)
+      toast.success('Vendor updated!')
+    } catch (err) {
+      toast.error('Failed to update vendor')
+    } finally {
+      setSavingEditVendor(false)
     }
   }
 
@@ -246,25 +350,44 @@ export function Settings() {
           </div>
 
           {/* Add Vendor Form */}
-          <form onSubmit={handleAddVendor} className="bg-gray-50 p-3 rounded-xl border border-gray-200 mb-3 space-y-2.5">
-            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Add New Vendor</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input
-                type="text"
-                placeholder="Vendor / Worker Name *"
-                value={vendorName}
-                onChange={e => setVendorName(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="tel"
-                placeholder="Mobile Number (10 digits)"
-                value={vendorMobile}
-                onChange={e => setVendorMobile(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+          <form onSubmit={handleAddVendor} className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 mb-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Add New Vendor</p>
+              <button
+                type="button"
+                onClick={handlePickContactForNew}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                title="Fetch name and phone number from your device contact book"
+              >
+                <BookUser className="h-3.5 w-3.5 text-blue-600" />
+                <span>Add from Contacts</span>
+              </button>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 block mb-0.5">Vendor / Worker Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ramesh Hardware, Suresh Painter"
+                  value={vendorName}
+                  onChange={e => setVendorName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 block mb-0.5">Mobile Number (10 digits)</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={vendorMobile}
+                  onChange={e => setVendorMobile(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
             <div className="flex gap-2 items-center">
               <select
                 value={vendorCategory}
@@ -275,7 +398,7 @@ export function Settings() {
                 {Object.keys(categories || {}).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <Button type="submit" size="sm" loading={savingVendor} className="gap-1 flex-shrink-0">
-                <Plus className="h-4 w-4" /> Add Vendor
+                <Plus className="h-4 w-4" /> Save Vendor
               </Button>
             </div>
           </form>
@@ -300,14 +423,24 @@ export function Settings() {
                       )}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteVendor(v.id)}
-                    className="p-1.5 text-gray-300 hover:text-red-600 transition-colors"
-                    title="Delete Vendor"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openEditVendor(v)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit Vendor"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteVendor(v.id)}
+                      className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Vendor"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -471,6 +604,93 @@ export function Settings() {
           </Button>
         </div>
       </PageWrapper>
+
+      {/* Edit Vendor Modal */}
+      {editingVendor && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl animate-scale-up">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                <Edit2 className="h-4 w-4 text-blue-700" />
+                Edit Vendor Details
+              </h4>
+              <button
+                onClick={() => setEditingVendor(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateVendor} className="space-y-3">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handlePickContactForEdit}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                >
+                  <BookUser className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Re-pick from Contacts</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Vendor / Worker Name *</label>
+                <input
+                  type="text"
+                  value={editVendorName}
+                  onChange={e => setEditVendorName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Mobile Number (10 digits)</label>
+                <input
+                  type="tel"
+                  value={editVendorMobile}
+                  onChange={e => setEditVendorMobile(e.target.value)}
+                  placeholder="e.g. 9876543210"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Default Category</label>
+                <select
+                  value={editVendorCategory}
+                  onChange={e => setEditVendorCategory(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">No Default Category</option>
+                  {Object.keys(categories || {}).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => setEditingVendor(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  fullWidth
+                  loading={savingEditVendor}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={signOutDialog}
