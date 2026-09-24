@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Upload, X, Image, Users, BookUser } from 'lucide-react'
+import { Upload, X, Image, Users, BookUser, Search } from 'lucide-react'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -28,13 +28,58 @@ export function AddExpense() {
   const [billPreview, setBillPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
 
+  // Vendor Search & Autocomplete state
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [vendorSearchModal, setVendorSearchModal] = useState(false)
+  const [vendorSearchQuery, setVendorSearchQuery] = useState('')
+  const suggestionRef = useRef(null)
+
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }
   } = useForm({
-    defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash' }
+    defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash', vendor_name: '', vendor_mobile: '' }
   })
 
   const watchCategory = watch('category')
+  const watchVendorName = watch('vendor_name') || ''
+
+  // Filter suggestions as user types in Vendor Name field
+  const matchingSuggestions = useMemo(() => {
+    if (!watchVendorName.trim() || !vendors || vendors.length === 0) return []
+    const q = watchVendorName.trim().toLowerCase()
+    return vendors.filter(v => v.name && v.name.toLowerCase().includes(q))
+  }, [watchVendorName, vendors])
+
+  // Filter vendors in Search Modal
+  const filteredModalVendors = useMemo(() => {
+    if (!vendors || vendors.length === 0) return []
+    if (!vendorSearchQuery.trim()) return vendors
+    const q = vendorSearchQuery.trim().toLowerCase()
+    return vendors.filter(v =>
+      (v.name && v.name.toLowerCase().includes(q)) ||
+      (v.mobile && v.mobile.includes(q))
+    )
+  }, [vendors, vendorSearchQuery])
+
+  const selectVendor = (v) => {
+    setValue('vendor_name', v.name, { shouldValidate: true })
+    if (v.mobile) {
+      setValue('vendor_mobile', v.mobile, { shouldValidate: true })
+    }
+    setShowSuggestions(false)
+    toast.success(`Selected "${v.name}"`)
+  }
+
+  // Close suggestion dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handlePickContact = async () => {
     if (!('contacts' in navigator && 'ContactsManager' in window)) {
@@ -69,8 +114,7 @@ export function AddExpense() {
     if (!selectedId) return
     const v = vendors.find(item => item.id === selectedId)
     if (v) {
-      setValue('vendor_name', v.name)
-      if (v.mobile) setValue('vendor_mobile', v.mobile)
+      selectVendor(v)
     }
   }
 
@@ -188,15 +232,28 @@ export function AddExpense() {
                   <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
                     Vendor / Worker Details
                   </span>
-                  <button
-                    type="button"
-                    onClick={handlePickContact}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
-                    title="Pick vendor from device contact book"
-                  >
-                    <BookUser className="h-3.5 w-3.5 text-blue-600" />
-                    <span>Pick from Contacts</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {vendors && vendors.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setVendorSearchModal(true); setVendorSearchQuery('') }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-200 transition-colors"
+                        title="Search vendor directory"
+                      >
+                        <Search className="h-3.5 w-3.5 text-gray-600" />
+                        <span>Search</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handlePickContact}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                      title="Pick vendor from device contact book"
+                    >
+                      <BookUser className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Contacts</span>
+                    </button>
+                  </div>
                 </div>
 
                 {vendors && vendors.length > 0 && (
@@ -213,7 +270,7 @@ export function AddExpense() {
                       <option value="">-- Choose from saved directory --</option>
                       {vendors.map(v => (
                         <option key={v.id} value={v.id}>
-                          {v.name} {v.mobile ? `(${v.mobile})` : ''}
+                          {v.name}
                         </option>
                       ))}
                     </select>
@@ -221,11 +278,51 @@ export function AddExpense() {
                 )}
               </div>
 
-              <Input
-                label="Vendor / Worker Name"
-                placeholder="e.g. Sharma Cement Store, Patil JCB"
-                {...register('vendor_name')}
-              />
+              {/* Vendor Name input with autocomplete suggestion dropdown */}
+              <div className="relative" ref={suggestionRef}>
+                <Input
+                  label="Vendor / Worker Name"
+                  placeholder="e.g. Sharma Cement Store, Patil JCB"
+                  {...register('vendor_name', {
+                    onChange: () => {
+                      if (!showSuggestions) setShowSuggestions(true)
+                    }
+                  })}
+                  onFocus={() => setShowSuggestions(true)}
+                  autoComplete="off"
+                />
+
+                {/* Dropdown Suggestions */}
+                {showSuggestions && matchingSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-56 overflow-y-auto">
+                    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-semibold text-gray-500">
+                      <span>Matching Saved Vendors</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSuggestions(false)}
+                        className="text-gray-400 hover:text-gray-600 p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                    {matchingSuggestions.map(v => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => selectVendor(v)}
+                        className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 active:bg-blue-100 transition-colors border-b last:border-0 border-gray-50 flex items-center justify-between group"
+                      >
+                        <span className="text-sm font-semibold text-gray-900 truncate">
+                          {v.name}
+                        </span>
+                        <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 group-hover:bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                          Select
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <Input
                 label="Vendor Mobile (Optional - for WhatsApp receipt)"
@@ -311,6 +408,62 @@ export function AddExpense() {
           </div>
         </form>
       </PageWrapper>
+
+      {/* Search Saved Vendors Modal */}
+      {vendorSearchModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl animate-scale-up">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                <Search className="h-4 w-4 text-blue-600" />
+                Search Saved Vendors
+              </h4>
+              <button
+                type="button"
+                onClick={() => setVendorSearchModal(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="search"
+                placeholder="Search vendor name..."
+                value={vendorSearchQuery}
+                onChange={e => setVendorSearchQuery(e.target.value)}
+                autoFocus
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 bg-gray-50"
+              />
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-1">
+              {filteredModalVendors.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-6">No matching vendors found</p>
+              ) : (
+                filteredModalVendors.map(v => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => {
+                      selectVendor(v)
+                      setVendorSearchModal(false)
+                    }}
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-colors flex items-center justify-between border border-transparent hover:border-blue-100 group"
+                  >
+                    <span className="text-sm font-semibold text-gray-800 truncate">{v.name}</span>
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 group-hover:bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                      Select
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
