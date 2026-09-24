@@ -286,8 +286,17 @@ function SitePhotosTab({ projectId }) {
 }
 
 // ── Overview Tab ───────────────────────────────────────────
-function OverviewTab({ project, stats, navigate, id }) {
+function OverviewTab({ project, stats, navigate, id, onTabSwitch }) {
   const balance = (stats?.totalReceived || 0) - (stats?.totalExpenses || 0)
+  const [planCount, setPlanCount] = useState(0)
+  const [photoCount, setPhotoCount] = useState(0)
+
+  useEffect(() => {
+    supabase.from('site_plans').select('id', { count: 'exact', head: true }).eq('project_id', id)
+      .then(({ count }) => setPlanCount(count || 0))
+    supabase.from('site_photos').select('id', { count: 'exact', head: true }).eq('project_id', id)
+      .then(({ count }) => setPhotoCount(count || 0))
+  }, [id])
 
   return (
     <div className="pb-32">
@@ -321,6 +330,22 @@ function OverviewTab({ project, stats, navigate, id }) {
           sub={stats?.lastTransactionDate ? `Last: ${formatDate(stats.lastTransactionDate)}` : 'No transactions'}
           onClick={() => navigate(`/projects/${id}/expenses`)}
         />
+        <StatCard
+          label="Site Plans"
+          value={planCount}
+          icon={FileIcon}
+          color="bg-sky-500"
+          sub={planCount === 0 ? 'Tap to upload' : `${planCount} file${planCount !== 1 ? 's' : ''}`}
+          onClick={() => onTabSwitch(1)}
+        />
+        <StatCard
+          label="Site Photos"
+          value={photoCount}
+          icon={Image}
+          color="bg-pink-500"
+          sub={photoCount === 0 ? 'Tap to add' : `${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
+          onClick={() => onTabSwitch(2)}
+        />
       </div>
 
       {/* Expense Breakdown */}
@@ -350,18 +375,6 @@ function OverviewTab({ project, stats, navigate, id }) {
           </div>
         </Card>
       )}
-
-      {/* PDF Report link */}
-      <button
-        onClick={() => navigate(`/projects/${id}/reports`)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm"
-      >
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-blue-600" />
-          <span className="text-sm font-medium text-gray-700">View PDF Reports</span>
-        </div>
-        <span className="text-xs text-blue-600 font-medium">Open →</span>
-      </button>
     </div>
   )
 }
@@ -422,12 +435,22 @@ export function ProjectDashboard() {
         subtitle={`${project.project_code} · ${project.owner_name}`}
         backTo="/projects"
         rightAction={
-          <button
-            onClick={() => navigate(`/projects/${id}/edit`)}
-            className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
-          >
-            <Edit2 className="h-4 w-4 text-gray-600" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(`/projects/${id}/reports`)}
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+              title="PDF Report"
+            >
+              <FileText className="h-4 w-4 text-gray-600" />
+            </button>
+            <button
+              onClick={() => navigate(`/projects/${id}/edit`)}
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+              title="Edit Project"
+            >
+              <Edit2 className="h-4 w-4 text-gray-600" />
+            </button>
+          </div>
         }
       />
 
@@ -459,7 +482,7 @@ export function ProjectDashboard() {
         </div>
 
         {/* Tab content */}
-        {activeTab === 0 && <OverviewTab project={project} stats={stats} navigate={navigate} id={id} />}
+        {activeTab === 0 && <OverviewTab project={project} stats={stats} navigate={navigate} id={id} onTabSwitch={setActiveTab} />}
         {activeTab === 1 && <SitePlansTab projectId={id} />}
         {activeTab === 2 && <SitePhotosTab projectId={id} />}
       </PageWrapper>
