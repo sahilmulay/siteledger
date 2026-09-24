@@ -412,7 +412,7 @@ Thank you!`
 
                     <button
                       onClick={() => setDeleteTarget(item.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                      className="p-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex-shrink-0"
                       title="Delete Expense"
                     >
                       <Trash2 className="h-4 w-4" />

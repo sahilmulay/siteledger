@@ -161,7 +161,8 @@ export function IncomeList() {
                   </div>
                   <button
                     onClick={() => setDeleteTarget(item.id)}
-                    className="p-2 text-gray-300 hover:text-red-500 transition-colors ml-2"
+                    className="p-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-colors ml-2 flex-shrink-0"
+                    title="Delete Income Entry"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

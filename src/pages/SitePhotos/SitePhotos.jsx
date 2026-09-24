@@ -185,10 +185,10 @@ export function SitePhotos() {
                             e.stopPropagation()
                             handleDelete(photo)
                           }}
-                          className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-red-600 text-white rounded-lg p-1.5 transition-colors"
+                          className="absolute top-1.5 right-1.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg p-1.5 shadow-md transition-colors"
                           title="Delete photo"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 rounded-b-xl pointer-events-none">
                           <p className="text-[10px] text-white text-center font-medium">

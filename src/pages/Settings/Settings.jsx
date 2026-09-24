@@ -611,7 +611,7 @@ export function Settings() {
                     <button
                       type="button"
                       onClick={() => handleDeleteVendor(v.id)}
-                      className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                       title="Delete Vendor"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -635,7 +635,7 @@ export function Settings() {
             </div>
             <button
               onClick={handleResetCategories}
-              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
+              className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg flex items-center gap-1 font-medium transition-colors"
               title="Reset to standard categories"
             >
               <RotateCcw className="h-3 w-3" /> Reset
@@ -676,7 +676,7 @@ export function Settings() {
                     <button
                       type="button"
                       onClick={() => handleDeleteCategory(catName)}
-                      className="p-1 text-gray-300 hover:text-red-500 transition-colors ml-2"
+                      className="p-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors ml-2"
                       title="Delete category"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -699,7 +699,7 @@ export function Settings() {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSubCategory(catName, sub)}
-                                className="text-gray-400 hover:text-red-600 ml-0.5"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-100 p-0.5 rounded transition-colors ml-0.5"
                                 title={`Remove ${sub}`}
                               >
                                 <X className="h-3 w-3" />

@@ -167,7 +167,7 @@ export function SitePlans() {
                       </a>
                       <button
                         onClick={() => handleDelete(plan)}
-                        className="p-2 rounded-xl hover:bg-red-50 text-red-500 transition-colors"
+                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="h-4 w-4" />
