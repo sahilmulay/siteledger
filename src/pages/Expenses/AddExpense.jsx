@@ -10,8 +10,10 @@ import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Input, Select, Textarea } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { PhoneChoiceModal } from '../../components/ui/PhoneChoiceModal'
 import { EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../lib/constants'
 import { todayInputDate } from '../../lib/formatters'
+import { parseContactNumbers } from '../../lib/contactHelper'
 
 export function AddExpense() {
   const { id: projectId } = useParams()
@@ -32,6 +34,7 @@ export function AddExpense() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [vendorSearchModal, setVendorSearchModal] = useState(false)
   const [vendorSearchQuery, setVendorSearchQuery] = useState('')
+  const [phoneChoiceData, setPhoneChoiceData] = useState(null)
   const suggestionRef = useRef(null)
 
   const {
@@ -94,13 +97,26 @@ export function AddExpense() {
       const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false })
       if (contacts && contacts.length > 0) {
         const contact = contacts[0]
-        const name = Array.isArray(contact.name) ? (contact.name[0] || '') : (contact.name || '')
-        const tel = Array.isArray(contact.tel) ? (contact.tel[0] || '') : (contact.tel || '')
-        const cleanMobile = tel.replace(/\D/g, '').slice(-10)
+        const { name, validNumbers } = parseContactNumbers(contact)
 
-        if (name) setValue('vendor_name', name)
-        if (cleanMobile) setValue('vendor_mobile', cleanMobile)
-        toast.success(`Imported ${name || 'contact'}!`)
+        if (name) setValue('vendor_name', name, { shouldValidate: true })
+
+        if (validNumbers.length > 1) {
+          // Multiple numbers: ask user to choose
+          setPhoneChoiceData({
+            name,
+            numbers: validNumbers,
+            onSelect: (chosenClean) => {
+              setValue('vendor_mobile', chosenClean, { shouldValidate: true })
+              toast.success(`Selected ${chosenClean} for ${name}`)
+            }
+          })
+        } else if (validNumbers.length === 1) {
+          setValue('vendor_mobile', validNumbers[0].clean, { shouldValidate: true })
+          toast.success(`Imported ${name || 'contact'}!`)
+        } else {
+          toast.success(`Imported ${name || 'contact'} (No 10-digit mobile found)`)
+        }
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -464,6 +480,12 @@ export function AddExpense() {
           </div>
         </div>
       )}
+
+      {/* Multiple Phone Choice Modal */}
+      <PhoneChoiceModal
+        data={phoneChoiceData}
+        onClose={() => setPhoneChoiceData(null)}
+      />
     </div>
   )
 }

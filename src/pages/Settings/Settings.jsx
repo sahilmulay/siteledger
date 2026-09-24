@@ -15,6 +15,8 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Badge } from '../../components/ui/Badge'
 import { EXPENSE_CATEGORIES } from '../../lib/constants'
 import { supabase } from '../../lib/supabase'
+import { parseContactNumbers } from '../../lib/contactHelper'
+import { PhoneChoiceModal } from '../../components/ui/PhoneChoiceModal'
 import toast from 'react-hot-toast'
 
 export function Settings() {
@@ -45,6 +47,9 @@ export function Settings() {
   const [editVendorName, setEditVendorName] = useState('')
   const [editVendorMobile, setEditVendorMobile] = useState('')
   const [savingEditVendor, setSavingEditVendor] = useState(false)
+
+  // Multi-phone selection state
+  const [phoneChoiceData, setPhoneChoiceData] = useState(null)
 
   // Category state
   const [newCatName, setNewCatName] = useState('')
@@ -254,13 +259,25 @@ export function Settings() {
       const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false })
       if (contacts && contacts.length > 0) {
         const contact = contacts[0]
-        const name = Array.isArray(contact.name) ? (contact.name[0] || '') : (contact.name || '')
-        const tel = Array.isArray(contact.tel) ? (contact.tel[0] || '') : (contact.tel || '')
-        const cleanMobile = tel.replace(/\D/g, '').slice(-10)
+        const { name, validNumbers } = parseContactNumbers(contact)
 
         if (name) setVendorName(name)
-        if (cleanMobile) setVendorMobile(cleanMobile)
-        toast.success(`Fetched ${name || 'contact'}! You can edit the details below before saving.`)
+
+        if (validNumbers.length > 1) {
+          setPhoneChoiceData({
+            name,
+            numbers: validNumbers,
+            onSelect: (chosenClean) => {
+              setVendorMobile(chosenClean)
+              toast.success(`Selected ${chosenClean} for ${name}`)
+            }
+          })
+        } else if (validNumbers.length === 1) {
+          setVendorMobile(validNumbers[0].clean)
+          toast.success(`Fetched ${name || 'contact'}!`)
+        } else {
+          toast.success(`Fetched ${name || 'contact'} (No 10-digit mobile found)`)
+        }
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -317,13 +334,25 @@ export function Settings() {
       const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false })
       if (contacts && contacts.length > 0) {
         const contact = contacts[0]
-        const name = Array.isArray(contact.name) ? (contact.name[0] || '') : (contact.name || '')
-        const tel = Array.isArray(contact.tel) ? (contact.tel[0] || '') : (contact.tel || '')
-        const cleanMobile = tel.replace(/\D/g, '').slice(-10)
+        const { name, validNumbers } = parseContactNumbers(contact)
 
         if (name) setEditVendorName(name)
-        if (cleanMobile) setEditVendorMobile(cleanMobile)
-        toast.success('Contact info fetched!')
+
+        if (validNumbers.length > 1) {
+          setPhoneChoiceData({
+            name,
+            numbers: validNumbers,
+            onSelect: (chosenClean) => {
+              setEditVendorMobile(chosenClean)
+              toast.success(`Selected ${chosenClean} for ${name}`)
+            }
+          })
+        } else if (validNumbers.length === 1) {
+          setEditVendorMobile(validNumbers[0].clean)
+          toast.success('Contact info fetched!')
+        } else {
+          toast.success('Contact info fetched (No 10-digit mobile found)')
+        }
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -876,6 +905,12 @@ export function Settings() {
         title="Sign Out"
         message="Are you sure you want to sign out of SiteLedger?"
         confirmLabel="Sign Out"
+      />
+
+      {/* Multiple Phone Choice Modal */}
+      <PhoneChoiceModal
+        data={phoneChoiceData}
+        onClose={() => setPhoneChoiceData(null)}
       />
     </div>
   )
