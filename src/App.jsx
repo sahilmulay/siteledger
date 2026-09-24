@@ -20,6 +20,7 @@ const ProjectReports = lazy(() => import('./pages/Reports/ProjectReports').then(
 const ReportsHub = lazy(() => import('./pages/Reports/ReportsHub').then(m => ({ default: m.ReportsHub })))
 const SitePlans = lazy(() => import('./pages/SitePlans/SitePlans').then(m => ({ default: m.SitePlans })))
 const SitePhotos = lazy(() => import('./pages/SitePhotos/SitePhotos').then(m => ({ default: m.SitePhotos })))
+const ExpenseCharts = lazy(() => import('./pages/Charts/ExpenseCharts').then(m => ({ default: m.ExpenseCharts })))
 const Settings = lazy(() => import('./pages/Settings/Settings').then(m => ({ default: m.Settings })))
 
 export default function App() {
@@ -67,6 +68,9 @@ export default function App() {
             } />
             <Route path="/projects/:id/photos" element={
               <ProtectedRoute><SitePhotos /></ProtectedRoute>
+            } />
+            <Route path="/projects/:id/charts" element={
+              <ProtectedRoute><ExpenseCharts /></ProtectedRoute>
             } />
 
             <Route path="/reports" element={

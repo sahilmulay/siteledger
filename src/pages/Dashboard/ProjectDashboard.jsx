@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, Wallet, ReceiptText,
-  Plus, Edit2, FileText, Image, File as FileIcon
+  Plus, Edit2, FileText, Image, File as FileIcon, PieChart
 } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
@@ -169,6 +169,22 @@ export function ProjectDashboard() {
               color="bg-pink-500"
               sub={photoCount === 0 ? 'Tap to view / add' : `${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
               onClick={() => navigate(`/projects/${id}/photos`)}
+            />
+            <StatCard
+              label="Expense Charts"
+              value="Pie Charts"
+              icon={PieChart}
+              color="bg-indigo-600"
+              sub="Category & Sub-cat"
+              onClick={() => navigate(`/projects/${id}/charts`)}
+            />
+            <StatCard
+              label="PDF Reports"
+              value="Statements"
+              icon={FileText}
+              color="bg-teal-600"
+              sub="Download & Share"
+              onClick={() => navigate(`/projects/${id}/reports`)}
             />
           </div>
 
