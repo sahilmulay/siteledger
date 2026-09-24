@@ -18,7 +18,6 @@ const AddExpense = lazy(() => import('./pages/Expenses/AddExpense').then(m => ({
 const ExpenseList = lazy(() => import('./pages/Expenses/ExpenseList').then(m => ({ default: m.ExpenseList })))
 const ProjectReports = lazy(() => import('./pages/Reports/ProjectReports').then(m => ({ default: m.ProjectReports })))
 const ReportsHub = lazy(() => import('./pages/Reports/ReportsHub').then(m => ({ default: m.ReportsHub })))
-const OwnerPortal = lazy(() => import('./pages/Share/OwnerPortal').then(m => ({ default: m.OwnerPortal })))
 const Settings = lazy(() => import('./pages/Settings/Settings').then(m => ({ default: m.Settings })))
 
 export default function App() {
@@ -30,7 +29,6 @@ export default function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/share/:token" element={<OwnerPortal />} />
 
             {/* Protected routes */}
             <Route path="/" element={<Navigate to="/projects" replace />} />

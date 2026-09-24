@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { FileText, Share2, Copy, Download, ExternalLink, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
+import { Share2, Download } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { useAuth } from '../../contexts/AuthContext'
 import { useIncome } from '../../hooks/useIncome'
@@ -11,12 +11,11 @@ import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/Badge'
-import { formatINR, formatDate } from '../../lib/formatters'
+import { formatINR } from '../../lib/formatters'
 import toast from 'react-hot-toast'
 
 export function ProjectReports() {
   const { id: projectId } = useParams()
-  const navigate = useNavigate()
   const { firmName } = useAuth()
   const { fetchProject, fetchProjectStats } = useProjects()
   const { fetchIncome } = useIncome()
@@ -27,7 +26,6 @@ export function ProjectReports() {
   const [loading, setLoading] = useState(true)
   const [pdfLoading, setPdfLoading] = useState(false)
   const [sharePdfLoading, setSharePdfLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -40,33 +38,17 @@ export function ProjectReports() {
     })
   }, [projectId])
 
-  const shareLink = project?.share_token
-    ? `${window.location.origin}/share/${project.share_token}`
-    : ''
-
-  const handleCopyLink = () => {
-    if (!shareLink) return
-    navigator.clipboard.writeText(shareLink)
-    setCopied(true)
-    toast.success('Share link copied!')
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   const handleDownloadPDF = async () => {
     if (!project || !stats) return
     setPdfLoading(true)
     try {
-      // Fetch full history for PDF (up to 500 rows)
       const [incRes, expRes] = await Promise.all([
         fetchIncome(projectId, { limit: 500 }),
         fetchExpenses(projectId, { limit: 500 })
       ])
       await generateProjectPDF({
         project,
-        stats: {
-          ...stats,
-          balance: (stats.totalReceived || 0) - (stats.totalExpenses || 0)
-        },
+        stats: { ...stats, balance: (stats.totalReceived || 0) - (stats.totalExpenses || 0) },
         income: incRes.data,
         expenses: expRes.data,
         firmName,
@@ -91,10 +73,7 @@ export function ProjectReports() {
       ])
       const { file, filename } = await generateProjectPDF({
         project,
-        stats: {
-          ...stats,
-          balance: (stats.totalReceived || 0) - (stats.totalExpenses || 0)
-        },
+        stats: { ...stats, balance: (stats.totalReceived || 0) - (stats.totalExpenses || 0) },
         income: incRes.data,
         expenses: expRes.data,
         firmName,
@@ -114,7 +93,7 @@ export function ProjectReports() {
         a.download = filename
         a.click()
         URL.revokeObjectURL(blobUrl)
-        toast('PDF downloaded. Direct file sharing is available on mobile/WhatsApp.', { icon: 'ℹ️' })
+        toast('PDF downloaded. Share it via WhatsApp from your downloads.', { icon: 'ℹ️' })
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -188,7 +167,7 @@ export function ProjectReports() {
             <h3 className="font-semibold text-gray-700 mb-3 text-sm">Category Breakdown</h3>
             <div className="space-y-2">
               {Object.entries(stats.categoryBreakdown)
-                .sort(([,a], [,b]) => b - a)
+                .sort(([, a], [, b]) => b - a)
                 .map(([cat, amt]) => (
                   <div key={cat} className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{cat}</span>
@@ -199,47 +178,18 @@ export function ProjectReports() {
           </Card>
         )}
 
-        {/* Actions */}
+        {/* PDF Actions — no share link, no owner portal */}
         <Card className="mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3 text-sm">PDF Report Actions</h3>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <Button fullWidth onClick={handleDownloadPDF} loading={pdfLoading} size="md">
-                <Download className="h-4 w-4" />
-                Download PDF
-              </Button>
-              <Button variant="secondary" fullWidth onClick={handleSharePDF} loading={sharePdfLoading} size="md">
-                <Share2 className="h-4 w-4 text-blue-700" />
-                Share PDF
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Owner Portal Link</p>
-              <div className="flex gap-2">
-                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-500 truncate">
-                  {shareLink || 'No share link available'}
-                </div>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  onClick={handleCopyLink}
-                  className="flex-shrink-0"
-                >
-                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-              {shareLink && (
-                <Button
-                  variant="ghost"
-                  fullWidth
-                  onClick={() => window.open(shareLink, '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Open Owner Portal
-                </Button>
-              )}
-            </div>
+          <h3 className="font-semibold text-gray-700 mb-3 text-sm">PDF Report</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <Button fullWidth onClick={handleDownloadPDF} loading={pdfLoading} size="md">
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Button>
+            <Button variant="secondary" fullWidth onClick={handleSharePDF} loading={sharePdfLoading} size="md">
+              <Share2 className="h-4 w-4 text-blue-700" />
+              Share PDF
+            </Button>
           </div>
         </Card>
       </PageWrapper>
