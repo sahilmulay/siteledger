@@ -45,7 +45,23 @@ export function useExpenses() {
         .insert({ ...expenseData, project_id: projectId })
         .select()
         .single()
-      if (error) throw error
+      if (error) {
+        if (error.message && error.message.includes('vendor_mobile')) {
+          // If column doesn't exist yet in Supabase schema, save mobile in remarks
+          const { vendor_mobile, ...fallbackData } = expenseData
+          const updatedRemarks = vendor_mobile 
+            ? `${fallbackData.remarks ? fallbackData.remarks + ' | ' : ''}Phone: ${vendor_mobile}`
+            : fallbackData.remarks
+          const retry = await supabase
+            .from('expenses')
+            .insert({ ...fallbackData, remarks: updatedRemarks, project_id: projectId })
+            .select()
+            .single()
+          if (retry.error) throw retry.error
+          return retry.data
+        }
+        throw error
+      }
       return data
     } catch (err) {
       setError(err.message)

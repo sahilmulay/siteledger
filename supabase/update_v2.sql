@@ -9,3 +9,6 @@ ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_payment_mode_check;
 
 -- Allow custom user-typed expense categories
 ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_category_check;
+
+-- Add vendor_mobile column to expenses table
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vendor_mobile text;

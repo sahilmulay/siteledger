@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Upload, X, Image } from 'lucide-react'
+import { Upload, X, Image, Users } from 'lucide-react'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -17,7 +17,11 @@ export function AddExpense() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
   const { addExpense, uploadBillImage } = useExpenses()
-  const { user } = useAuth()
+  const { user, categories: userCategories, vendors = [] } = useAuth()
+
+  const categories = (userCategories && Object.keys(userCategories).length > 0)
+    ? userCategories
+    : EXPENSE_CATEGORIES
 
   const [customCategory, setCustomCategory] = useState('')
   const [billFile, setBillFile] = useState(null)
@@ -31,6 +35,19 @@ export function AddExpense() {
   })
 
   const watchCategory = watch('category')
+
+  const handleSelectSavedVendor = (e) => {
+    const selectedId = e.target.value
+    if (!selectedId) return
+    const v = vendors.find(item => item.id === selectedId)
+    if (v) {
+      setValue('vendor_name', v.name)
+      if (v.mobile) setValue('vendor_mobile', v.mobile)
+      if (v.category && categories[v.category]) {
+        setValue('category', v.category)
+      }
+    }
+  }
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -71,6 +88,7 @@ export function AddExpense() {
         payment_mode: data.payment_mode,
         transaction_reference: data.transaction_reference || null,
         vendor_name: data.vendor_name || null,
+        vendor_mobile: data.vendor_mobile ? data.vendor_mobile.replace(/\D/g, '').slice(-10) : null,
         expense_date: data.expense_date,
         remarks: data.remarks || null,
         bill_image_url: billImageUrl
@@ -114,7 +132,7 @@ export function AddExpense() {
                 }}
               >
                 <option value="">Select Category</option>
-                {Object.keys(EXPENSE_CATEGORIES).map(cat => (
+                {Object.keys(categories).map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
                 <option value="Other">Other (Type custom)</option>
@@ -130,19 +148,49 @@ export function AddExpense() {
                 />
               )}
 
-              {watchCategory && watchCategory !== 'Other' && EXPENSE_CATEGORIES[watchCategory] && (
+              {watchCategory && watchCategory !== 'Other' && categories[watchCategory] && (
                 <Select label="Sub-Category" {...register('sub_category')}>
                   <option value="">Select Sub-Category</option>
-                  {EXPENSE_CATEGORIES[watchCategory].map(sub => (
+                  {categories[watchCategory].map(sub => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
                 </Select>
               )}
 
+              {/* Pre-Loaded Vendor Selection */}
+              {vendors && vendors.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1 flex items-center gap-1">
+                    <Users className="h-3.5 w-3.5 text-blue-600" />
+                    Quick Pick Saved Vendor
+                  </label>
+                  <select
+                    onChange={handleSelectSavedVendor}
+                    defaultValue=""
+                    className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
+                  >
+                    <option value="">-- Choose from saved directory --</option>
+                    {vendors.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} {v.mobile ? `(${v.mobile})` : ''} {v.category ? `• ${v.category}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <Input
-                label="Vendor Name"
-                placeholder="e.g. Sharma Cement Store"
+                label="Vendor / Worker Name"
+                placeholder="e.g. Sharma Cement Store, Patil JCB"
                 {...register('vendor_name')}
+              />
+
+              <Input
+                label="Vendor Mobile (Optional - for WhatsApp receipt)"
+                type="tel"
+                placeholder="e.g. 9876543210"
+                {...register('vendor_mobile')}
+                hint="Used to send payment voucher/receipt directly to vendor on WhatsApp"
               />
 
               <Select
@@ -171,7 +219,7 @@ export function AddExpense() {
                 error={errors.expense_date?.message}
               />
 
-              {/* Bill Image Upload (directly after date, no separate card) */}
+              {/* Bill Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Bill / Receipt Photo (Optional)</label>
                 {billPreview ? (

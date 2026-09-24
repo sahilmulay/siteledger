@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   payment_mode          text NOT NULL,
   transaction_reference text,
   vendor_name           text,
+  vendor_mobile         text,
   expense_date          date NOT NULL DEFAULT CURRENT_DATE,
   remarks               text,
   bill_image_url        text,
