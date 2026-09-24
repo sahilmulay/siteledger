@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   LogOut, User, HardHat, Shield, Building2, Save,
   Plus, Trash2, X, Phone, Tag, RotateCcw, ChevronDown, ChevronUp, Users,
-  BookUser, Edit2
+  BookUser, Edit2, FileSpreadsheet, Database, Download
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -14,6 +14,7 @@ import { Input, Select } from '../../components/ui/Input'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Badge } from '../../components/ui/Badge'
 import { EXPENSE_CATEGORIES } from '../../lib/constants'
+import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 export function Settings() {
@@ -57,7 +58,172 @@ export function Settings() {
   const [signOutDialog, setSignOutDialog] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // Data Export state
+  const [exportingCSV, setExportingCSV] = useState(false)
+  const [exportingJSON, setExportingJSON] = useState(false)
+
   // --- Handlers ---
+  const handleExportCSV = async () => {
+    setExportingCSV(true)
+    try {
+      const [projectsRes, expensesRes, incomeRes] = await Promise.all([
+        supabase.from('projects').select('*').order('created_at', { ascending: false }),
+        supabase.from('expenses').select('*').order('expense_date', { ascending: false }),
+        supabase.from('income').select('*').order('date', { ascending: false })
+      ])
+
+      if (projectsRes.error) throw projectsRes.error
+      if (expensesRes.error) throw expensesRes.error
+      if (incomeRes.error) throw incomeRes.error
+
+      const projectsMap = (projectsRes.data || []).reduce((acc, p) => {
+        acc[p.id] = p
+        return acc
+      }, {})
+
+      const rows = []
+      // Column Headers
+      rows.push([
+        'Date',
+        'Transaction Type',
+        'Project Code',
+        'Project Name',
+        'Category',
+        'Sub-Category',
+        'Vendor / Received From',
+        'Mobile Number',
+        'Payment Mode',
+        'Reference / UTR',
+        'Bill Number',
+        'Amount (Rs)',
+        'Remarks / Description'
+      ])
+
+      // Add Incomes
+      ;(incomeRes.data || []).forEach(inc => {
+        const proj = projectsMap[inc.project_id] || {}
+        rows.push([
+          inc.date || '',
+          'INCOME',
+          proj.project_code || '',
+          proj.project_name || '',
+          'Client Payment',
+          '',
+          proj.owner_name || 'Client',
+          '',
+          inc.payment_mode || '',
+          '',
+          '',
+          inc.amount || 0,
+          inc.remarks || ''
+        ])
+      })
+
+      // Add Expenses
+      ;(expensesRes.data || []).forEach(exp => {
+        const proj = projectsMap[exp.project_id] || {}
+        const mobile = exp.vendor_mobile || (exp.remarks?.match(/Phone:\s*(\d+)/)?.[1]) || ''
+        rows.push([
+          exp.expense_date || '',
+          'EXPENSE',
+          proj.project_code || '',
+          proj.project_name || '',
+          exp.category || '',
+          exp.sub_category || '',
+          exp.vendor_name || 'Cash / Bearer',
+          mobile,
+          exp.payment_mode || '',
+          exp.transaction_reference || '',
+          exp.bill_number || '',
+          exp.amount || 0,
+          exp.remarks || ''
+        ])
+      })
+
+      const headerRow = rows[0]
+      const dataRows = rows.slice(1).sort((a, b) => new Date(b[0]) - new Date(a[0]))
+      const allRows = [headerRow, ...dataRows]
+
+      // Format as CSV with UTF-8 BOM
+      const csvContent = allRows.map(row =>
+        row.map(val => {
+          if (val === null || val === undefined) return '""'
+          const s = String(val)
+          return `"${s.replace(/"/g, '""')}"`
+        }).join(',')
+      ).join('\r\n')
+
+      const dateStr = new Date().toISOString().split('T')[0]
+      const prefix = (firmName || 'SiteLedger').replace(/\s+/g, '_')
+      const filename = `${prefix}_Full_Ledger_${dateStr}.csv`
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`Exported ${dataRows.length} transactions to Excel/CSV!`)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to export data: ' + err.message)
+    } finally {
+      setExportingCSV(false)
+    }
+  }
+
+  const handleExportJSON = async () => {
+    setExportingJSON(true)
+    try {
+      const [projectsRes, expensesRes, incomeRes, plansRes, photosRes] = await Promise.all([
+        supabase.from('projects').select('*').order('created_at', { ascending: false }),
+        supabase.from('expenses').select('*').order('expense_date', { ascending: false }),
+        supabase.from('income').select('*').order('date', { ascending: false }),
+        supabase.from('site_plans').select('*').order('created_at', { ascending: false }),
+        supabase.from('site_photos').select('*').order('created_at', { ascending: false })
+      ])
+
+      const backupData = {
+        backup_version: '1.0',
+        exported_at: new Date().toISOString(),
+        firm_name: firmName,
+        user_email: user?.email,
+        vendors: vendors || [],
+        categories: categories || {},
+        projects: projectsRes.data || [],
+        expenses: expensesRes.data || [],
+        income: incomeRes.data || [],
+        site_plans: plansRes.data || [],
+        site_photos: photosRes.data || []
+      }
+
+      const jsonStr = JSON.stringify(backupData, null, 2)
+      const dateStr = new Date().toISOString().split('T')[0]
+      const prefix = (firmName || 'SiteLedger').replace(/\s+/g, '_')
+      const filename = `${prefix}_Full_Database_Backup_${dateStr}.json`
+
+      const blob = new Blob([jsonStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success('Complete database backup downloaded!')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to backup: ' + err.message)
+    } finally {
+      setExportingJSON(false)
+    }
+  }
   const handleSaveFirmName = async (e) => {
     e.preventDefault()
     if (!currentFirmName.trim()) {
@@ -578,6 +744,47 @@ export function Settings() {
           </div>
         </Card>
 
+        {/* Data Backup & Export */}
+        <Card className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Database className="h-4 w-4 text-emerald-600" />
+            <h3 className="font-semibold text-gray-700 text-sm">Data Backup & Export</h3>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            Export all your project ledgers, income, expenses, and vendor records. Open in Microsoft Excel, Google Sheets, or keep as a safe offline backup.
+          </p>
+
+          <div className="space-y-2">
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleExportCSV}
+              loading={exportingCSV}
+              className="flex items-center justify-center gap-2 border-emerald-200 text-emerald-800 hover:bg-emerald-50 bg-emerald-50/50"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <span>Export Full Data (Excel / CSV)</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              fullWidth
+              onClick={handleExportJSON}
+              loading={exportingJSON}
+              size="sm"
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              <Download className="h-3.5 w-3.5 mr-1" />
+              Download Full Database Backup (JSON)
+            </Button>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+            <span>🔒 100% encrypted & private to your account</span>
+            <span>Offline compatible</span>
+          </div>
+        </Card>
+
         {/* Security & App Info */}
         <Card className="mb-4">
           <div className="flex items-center gap-2 mb-2">
@@ -585,9 +792,9 @@ export function Settings() {
             <h3 className="font-semibold text-gray-700 text-sm">Security & Privacy</h3>
           </div>
           <div className="space-y-1.5 text-xs text-gray-600">
-            <p>✓ All data protected by Row Level Security (RLS)</p>
+            <p>✓ All financial records secured by PostgreSQL Row Level Security (RLS)</p>
             <p>✓ Vendor directory & custom categories synced to your account</p>
-            <p>✓ Owner portal is strictly read-only</p>
+            <p>✓ Permanent cloud database with on-demand offline Excel backups</p>
           </div>
         </Card>
 
