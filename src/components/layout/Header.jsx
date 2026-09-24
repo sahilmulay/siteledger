@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 
-export function Header({ title, subtitle, backTo, rightAction, backLabel }) {
+export function Header({ title, subtitle, backTo, rightAction, backLabel, badge }) {
   const navigate = useNavigate()
 
   const handleBack = () => {
@@ -22,7 +22,10 @@ export function Header({ title, subtitle, backTo, rightAction, backLabel }) {
           </button>
         )}
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-gray-900 truncate leading-tight">{title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold text-gray-900 truncate leading-tight">{title}</h1>
+            {badge && <div className="flex-shrink-0">{badge}</div>}
+          </div>
           {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
         </div>
         {rightAction && <div className="flex-shrink-0">{rightAction}</div>}
