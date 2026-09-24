@@ -507,6 +507,16 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
 
   let y = 14
 
+  const filterTags = []
+  if (filterSummary.category) filterTags.push(`Category: ${filterSummary.category}`)
+  if (filterSummary.subCategory) filterTags.push(`Sub-Cat: ${filterSummary.subCategory}`)
+  if (filterSummary.paymentMode) filterTags.push(`Mode: ${filterSummary.paymentMode}`)
+  if (filterSummary.startDate || filterSummary.endDate) {
+    filterTags.push(`Date: ${filterSummary.startDate || 'Start'} to ${filterSummary.endDate || 'Now'}`)
+  }
+  if (filterSummary.search) filterTags.push(`Search: "${filterSummary.search}"`)
+  const isFiltered = filterTags.length > 0
+
   // Header
   doc.setTextColor(...BLACK)
   doc.setFontSize(18)
@@ -516,7 +526,7 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
   doc.setFontSize(9.5)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...DARK_GRAY)
-  doc.text('Filtered Expense Report', margin, y + 10)
+  doc.text(isFiltered ? 'Filtered Expense Report' : 'Expense Report', margin, y + 10)
 
   // Right side meta
   doc.setFontSize(8.5)
@@ -543,21 +553,12 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
   doc.setFontSize(8.5)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...BLACK)
-  doc.text('Active Filters Applied:', margin + 4, y + 6)
+  doc.text(isFiltered ? 'Active Filters Applied:' : 'Filter Status:', margin + 4, y + 6)
 
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...DARK_GRAY)
 
-  const filterTags = []
-  if (filterSummary.category) filterTags.push(`Category: ${filterSummary.category}`)
-  if (filterSummary.subCategory) filterTags.push(`Sub-Cat: ${filterSummary.subCategory}`)
-  if (filterSummary.paymentMode) filterTags.push(`Mode: ${filterSummary.paymentMode}`)
-  if (filterSummary.startDate || filterSummary.endDate) {
-    filterTags.push(`Date: ${filterSummary.startDate || 'Start'} to ${filterSummary.endDate || 'Now'}`)
-  }
-  if (filterSummary.search) filterTags.push(`Search: "${filterSummary.search}"`)
-
-  const filterText = filterTags.length > 0 ? filterTags.join('  |  ') : 'None (Showing All Filtered)'
+  const filterText = isFiltered ? filterTags.join('  |  ') : 'All Expenses (No filter applied)'
   const splitFilter = doc.splitTextToSize(filterText, contentW - 65)
   doc.text(splitFilter, margin + 4, y + 12)
 
@@ -622,7 +623,7 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
       6: { halign: 'right', fontStyle: 'bold' }
     },
     foot: [[
-      'Total Filtered Amount', '', '', '', '', `${expenses.length} Items`,
+      isFiltered ? 'Total Filtered Amount' : 'Total Expenses', '', '', '', '', `${expenses.length} Items`,
       formatPDFMoney(totalAmount)
     ]]
   })
@@ -639,7 +640,7 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
     doc.setTextColor(...DARK_GRAY)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      `${firmName || 'SiteLedger'} · Filtered Expense Report · ${project?.project_name || ''}`,
+      `${firmName || 'SiteLedger'} · ${isFiltered ? 'Filtered Expense Report' : 'Expense Report'} · ${project?.project_name || ''}`,
       margin,
       pageH - 6
     )
@@ -652,7 +653,7 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
   }
 
   const prefix = (firmName || 'SiteLedger').replace(/\s+/g, '_')
-  const filename = `${prefix}_${project?.project_code || 'PRJ'}_Filtered_Expenses_${new Date().toLocaleDateString('en-IN').replace(/\//g, '-')}.pdf`
+  const filename = `${prefix}_${project?.project_code || 'PRJ'}_${isFiltered ? 'Filtered_Expenses' : 'Expenses'}_${new Date().toLocaleDateString('en-IN').replace(/\//g, '-')}.pdf`
   if (save) doc.save(filename)
 
   const blob = doc.output('blob')

@@ -141,7 +141,7 @@ export function ExpenseList() {
         firmName,
         save: true
       })
-      toast.success('Filtered expenses PDF downloaded!')
+      toast.success(hasActiveFilters ? 'Filtered expenses PDF downloaded!' : 'Expenses PDF downloaded!')
     } catch (err) {
       console.error(err)
       toast.error('Failed to generate PDF')
@@ -309,10 +309,10 @@ Thank you!`
               onClick={handleDownloadFilteredPDF}
               loading={downloadingPDF}
               className="bg-white border-red-300 text-red-700 hover:bg-red-100/60 shadow-sm"
-              title="Download PDF containing only filtered entries"
+              title={hasActiveFilters ? "Download PDF containing only filtered entries" : "Download Expenses PDF"}
             >
               <Download className="h-4 w-4" />
-              Download Filtered PDF
+              {hasActiveFilters ? 'Download Filtered PDF' : 'Download PDF'}
             </Button>
           </div>
         )}
