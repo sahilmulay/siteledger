@@ -177,6 +177,10 @@ Thank you!`
     const phone = clean.length === 10 ? `91${clean}` : clean
     const msg = formatWhatsAppMessage(item)
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+    
+    // Automatically trigger PDF download when sharing to WhatsApp
+    handleDownloadVoucher(item)
+
     window.open(url, '_blank')
     toast.success('Opening WhatsApp with payment receipt...')
   }
