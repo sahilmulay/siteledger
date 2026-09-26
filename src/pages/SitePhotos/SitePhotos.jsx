@@ -81,10 +81,10 @@ export function SitePhotos() {
     try {
       await supabase.storage.from('project-files').remove([photo.storage_path])
       await supabase.from('site_photos').delete().eq('id', photo.id)
-      toast.success('Photo deleted')
+      toast.success('Photo deleted successfully!')
       loadPhotos()
     } catch (err) {
-      toast.error('Failed to delete: ' + err.message)
+      toast.error('Failed to delete photo: ' + err.message)
     }
   }
 

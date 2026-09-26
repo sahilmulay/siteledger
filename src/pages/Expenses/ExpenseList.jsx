@@ -76,9 +76,9 @@ export function ExpenseList() {
     try {
       await deleteExpense(deleteTarget)
       setExpenses(prev => prev.filter(e => e.id !== deleteTarget))
-      toast.success('Expense deleted')
+      toast.success('Expense deleted successfully!')
     } catch {
-      toast.error('Failed to delete')
+      toast.error('Failed to delete expense')
     } finally {
       setDeleteLoading(false)
       setDeleteTarget(null)

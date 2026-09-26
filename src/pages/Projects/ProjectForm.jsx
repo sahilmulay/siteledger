@@ -36,11 +36,11 @@ export function ProjectForm({ mode = 'create' }) {
     try {
       if (mode === 'create') {
         const project = await createProject(data)
-        toast.success('Project created!')
+        toast.success('Project created successfully!')
         navigate(`/projects/${project.id}`, { replace: true })
       } else {
         await updateProject(id, data)
-        toast.success('Project updated!')
+        toast.success('Project updated successfully!')
         navigate(`/projects/${id}`, { replace: true })
       }
     } catch (err) {

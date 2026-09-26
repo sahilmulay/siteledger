@@ -56,9 +56,9 @@ export function IncomeList() {
     try {
       await deleteIncome(deleteTarget)
       setIncome(prev => prev.filter(i => i.id !== deleteTarget))
-      toast.success('Income entry deleted')
+      toast.success('Income deleted successfully!')
     } catch (err) {
-      toast.error('Failed to delete')
+      toast.error('Failed to delete income entry')
     } finally {
       setDeleteLoading(false)
       setDeleteTarget(null)

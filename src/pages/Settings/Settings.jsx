@@ -236,7 +236,7 @@ export function Settings() {
     setSavingFirm(true)
     try {
       await updateFirmName(currentFirmName.trim())
-      toast.success('Firm name updated!')
+      toast.success('Firm name updated successfully!')
     } catch (err) {
       toast.error(err.message || 'Failed to update firm name')
     } finally {
@@ -311,7 +311,7 @@ export function Settings() {
       await updateVendors(updated)
       setVendorName('')
       setVendorMobile('')
-      toast.success('Vendor added!')
+      toast.success('Vendor added successfully!')
     } catch (err) {
       toast.error('Failed to add vendor')
     } finally {
@@ -387,7 +387,7 @@ export function Settings() {
       })
       await updateVendors(updated)
       setEditingVendor(null)
-      toast.success('Vendor updated!')
+      toast.success('Vendor updated successfully!')
     } catch (err) {
       toast.error('Failed to update vendor')
     } finally {
@@ -399,7 +399,7 @@ export function Settings() {
     try {
       const updated = vendors.filter(v => v.id !== id)
       await updateVendors(updated)
-      toast.success('Vendor removed')
+      toast.success('Vendor removed successfully!')
     } catch {
       toast.error('Failed to remove vendor')
     }
@@ -422,7 +422,7 @@ export function Settings() {
     try {
       await updateCategories(updated)
       setNewCatName('')
-      toast.success(`Category "${name}" added!`)
+      toast.success(`Category "${name}" added successfully!`)
     } catch {
       toast.error('Failed to save category')
     }
@@ -434,7 +434,7 @@ export function Settings() {
     delete updated[catName]
     try {
       await updateCategories(updated)
-      toast.success(`Category "${catName}" removed`)
+      toast.success(`Category "${catName}" removed successfully!`)
     } catch {
       toast.error('Failed to remove category')
     }
@@ -456,7 +456,7 @@ export function Settings() {
       await updateCategories(updated)
       setNewSubName('')
       setActiveSubInput(null)
-      toast.success(`Sub-category "${sub}" added`)
+      toast.success(`Sub-category "${sub}" added successfully!`)
     } catch {
       toast.error('Failed to save sub-category')
     }
@@ -470,7 +470,7 @@ export function Settings() {
     }
     try {
       await updateCategories(updated)
-      toast.success(`Sub-category "${subName}" removed`)
+      toast.success(`Sub-category "${subName}" removed successfully!`)
     } catch {
       toast.error('Failed to remove sub-category')
     }
@@ -480,7 +480,7 @@ export function Settings() {
     if (!confirm('Reset all categories back to default standard construction categories?')) return
     try {
       await updateCategories(EXPENSE_CATEGORIES)
-      toast.success('Categories reset to defaults')
+      toast.success('Categories reset to defaults successfully!')
     } catch {
       toast.error('Failed to reset categories')
     }

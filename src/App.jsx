@@ -110,15 +110,22 @@ export default function App() {
 
         <Toaster
           position="top-center"
-          gutter={8}
+          gutter={12}
+          containerStyle={{
+            top: '45%',
+          }}
           toastOptions={{
-            duration: 3000,
+            duration: 3500,
             style: {
               background: '#1f2937',
               color: '#f9fafb',
-              borderRadius: '12px',
-              fontSize: '14px',
-              maxWidth: '340px'
+              borderRadius: '16px',
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '16px 24px',
+              maxWidth: '380px',
+              textAlign: 'center',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
             },
             success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
             error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } }

@@ -66,7 +66,7 @@ export function SitePlans() {
         storage_path: path
       })
       if (dbErr) throw dbErr
-      toast.success('Site plan uploaded!')
+      toast.success('Site plan uploaded successfully!')
       loadPlans()
     } catch (err) {
       toast.error('Upload failed: ' + err.message)
@@ -81,7 +81,7 @@ export function SitePlans() {
     try {
       await supabase.storage.from('project-files').remove([plan.storage_path])
       await supabase.from('site_plans').delete().eq('id', plan.id)
-      toast.success('Plan deleted')
+      toast.success('Site plan deleted successfully!')
       loadPlans()
     } catch (err) {
       toast.error('Failed to delete plan: ' + err.message)
