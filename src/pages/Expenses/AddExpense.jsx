@@ -19,13 +19,14 @@ export function AddExpense() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
   const { addExpense, uploadBillImage } = useExpenses()
-  const { user, categories: userCategories, vendors = [] } = useAuth()
+  const { user, categories: userCategories, vendors = [], updateCategories } = useAuth()
 
   const categories = (userCategories && Object.keys(userCategories).length > 0)
     ? userCategories
     : EXPENSE_CATEGORIES
 
   const [customCategory, setCustomCategory] = useState('')
+  const [customSubCategory, setCustomSubCategory] = useState('')
   const [billFile, setBillFile] = useState(null)
   const [billPreview, setBillPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -44,6 +45,7 @@ export function AddExpense() {
   })
 
   const watchCategory = watch('category')
+  const watchSubCategory = watch('sub_category')
   const watchVendorName = watch('vendor_name') || ''
 
   // Filter suggestions as user types in Vendor Name field
@@ -159,6 +161,8 @@ export function AddExpense() {
         return
       }
 
+      const finalSubCategory = data.sub_category === 'Other' ? customSubCategory.trim() : (data.sub_category || null)
+
       let billImageUrl = null
       if (billFile) {
         setUploading(true)
@@ -168,7 +172,7 @@ export function AddExpense() {
 
       await addExpense(projectId, {
         category: finalCategory,
-        sub_category: data.category === 'Other' ? null : (data.sub_category || null),
+        sub_category: finalSubCategory,
         amount: parseFloat(data.amount),
         payment_mode: data.payment_mode,
         transaction_reference: data.transaction_reference || null,
@@ -178,6 +182,36 @@ export function AddExpense() {
         remarks: data.remarks || null,
         bill_image_url: billImageUrl
       })
+
+      // Update global categories silently if new ones were added
+      let updatedCats = { ...categories }
+      let catsChanged = false
+
+      if (data.category === 'Other' && finalCategory) {
+        if (!updatedCats[finalCategory]) {
+          updatedCats[finalCategory] = []
+          catsChanged = true
+        }
+      }
+
+      if (finalCategory && data.sub_category === 'Other' && finalSubCategory) {
+        if (!updatedCats[finalCategory]) {
+          updatedCats[finalCategory] = []
+        }
+        if (!updatedCats[finalCategory].includes(finalSubCategory)) {
+          updatedCats[finalCategory] = [...updatedCats[finalCategory], finalSubCategory]
+          catsChanged = true
+        }
+      }
+
+      if (catsChanged && updateCategories) {
+        try {
+          await updateCategories(updatedCats)
+        } catch (err) {
+          console.error("Failed to update global categories:", err)
+        }
+      }
+
       toast.success('Expense added successfully!')
       navigate(`/projects/${projectId}`)
     } catch (err) {
@@ -214,18 +248,20 @@ export function AddExpense() {
                 onChange={(e) => {
                   setValue('category', e.target.value)
                   setValue('sub_category', '')
+                  setCustomCategory('')
+                  setCustomSubCategory('')
                 }}
               >
                 <option value="">Select Category</option>
                 {Object.keys(categories).map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
-                <option value="Other">Other (Type custom)</option>
+                <option value="Other">+ Add New Category</option>
               </Select>
 
               {watchCategory === 'Other' && (
                 <Input
-                  label="Specify Custom Category *"
+                  label="New Category Name *"
                   placeholder="e.g. Site Cleaning, Municipal Fees, Tea/Snacks"
                   required
                   value={customCategory}
@@ -233,13 +269,32 @@ export function AddExpense() {
                 />
               )}
 
-              {watchCategory && watchCategory !== 'Other' && categories[watchCategory] && (
-                <Select label="Sub-Category" {...register('sub_category')}>
-                  <option value="">Select Sub-Category</option>
-                  {categories[watchCategory].map(sub => (
+              {/* Sub Category Selection */}
+              {watchCategory && (
+                <Select 
+                  label="Sub-Category" 
+                  {...register('sub_category')}
+                  onChange={(e) => {
+                    setValue('sub_category', e.target.value)
+                    setCustomSubCategory('')
+                  }}
+                >
+                  <option value="">Select Sub-Category (Optional)</option>
+                  {watchCategory !== 'Other' && categories[watchCategory] && categories[watchCategory].map(sub => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
+                  <option value="Other">+ Add New Sub-Category</option>
                 </Select>
+              )}
+
+              {watchSubCategory === 'Other' && (
+                <Input
+                  label="New Sub-Category Name *"
+                  placeholder="e.g. Labour, Material"
+                  required
+                  value={customSubCategory}
+                  onChange={e => setCustomSubCategory(e.target.value)}
+                />
               )}
 
               {/* Pre-Loaded Vendor Selection & Contacts */}
