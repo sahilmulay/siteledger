@@ -6,28 +6,49 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { BottomNav } from './components/layout/BottomNav'
 import { PageLoader } from './components/ui/Spinner'
 
+import { ErrorBoundary } from './components/layout/ErrorBoundary'
+
+// Wrapper to automatically hard reload the app once if a chunk fails to load (e.g. due to new deployment)
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const key = 'chunk-failed-retry'
+    try {
+      const component = await componentImport()
+      window.sessionStorage.removeItem(key)
+      return component
+    } catch (error) {
+      if (!window.sessionStorage.getItem(key)) {
+        window.sessionStorage.setItem(key, 'true')
+        window.location.reload()
+      } else {
+        throw error
+      }
+    }
+  })
+
 // Lazy-loaded pages for code splitting
-const Login = lazy(() => import('./pages/Auth/Login').then(m => ({ default: m.Login })))
-const Register = lazy(() => import('./pages/Auth/Register').then(m => ({ default: m.Register })))
-const ProjectList = lazy(() => import('./pages/Projects/ProjectList').then(m => ({ default: m.ProjectList })))
-const ProjectForm = lazy(() => import('./pages/Projects/ProjectForm').then(m => ({ default: m.ProjectForm })))
-const ProjectDashboard = lazy(() => import('./pages/Dashboard/ProjectDashboard').then(m => ({ default: m.ProjectDashboard })))
-const AddIncome = lazy(() => import('./pages/Income/AddIncome').then(m => ({ default: m.AddIncome })))
-const IncomeList = lazy(() => import('./pages/Income/IncomeList').then(m => ({ default: m.IncomeList })))
-const AddExpense = lazy(() => import('./pages/Expenses/AddExpense').then(m => ({ default: m.AddExpense })))
-const ExpenseList = lazy(() => import('./pages/Expenses/ExpenseList').then(m => ({ default: m.ExpenseList })))
-const ProjectReports = lazy(() => import('./pages/Reports/ProjectReports').then(m => ({ default: m.ProjectReports })))
-const ReportsHub = lazy(() => import('./pages/Reports/ReportsHub').then(m => ({ default: m.ReportsHub })))
-const SitePlans = lazy(() => import('./pages/SitePlans/SitePlans').then(m => ({ default: m.SitePlans })))
-const SitePhotos = lazy(() => import('./pages/SitePhotos/SitePhotos').then(m => ({ default: m.SitePhotos })))
-const ExpenseCharts = lazy(() => import('./pages/Charts/ExpenseCharts').then(m => ({ default: m.ExpenseCharts })))
-const Settings = lazy(() => import('./pages/Settings/Settings').then(m => ({ default: m.Settings })))
+const Login = lazyWithRetry(() => import('./pages/Auth/Login').then(m => ({ default: m.Login })))
+const Register = lazyWithRetry(() => import('./pages/Auth/Register').then(m => ({ default: m.Register })))
+const ProjectList = lazyWithRetry(() => import('./pages/Projects/ProjectList').then(m => ({ default: m.ProjectList })))
+const ProjectForm = lazyWithRetry(() => import('./pages/Projects/ProjectForm').then(m => ({ default: m.ProjectForm })))
+const ProjectDashboard = lazyWithRetry(() => import('./pages/Dashboard/ProjectDashboard').then(m => ({ default: m.ProjectDashboard })))
+const AddIncome = lazyWithRetry(() => import('./pages/Income/AddIncome').then(m => ({ default: m.AddIncome })))
+const IncomeList = lazyWithRetry(() => import('./pages/Income/IncomeList').then(m => ({ default: m.IncomeList })))
+const AddExpense = lazyWithRetry(() => import('./pages/Expenses/AddExpense').then(m => ({ default: m.AddExpense })))
+const ExpenseList = lazyWithRetry(() => import('./pages/Expenses/ExpenseList').then(m => ({ default: m.ExpenseList })))
+const ProjectReports = lazyWithRetry(() => import('./pages/Reports/ProjectReports').then(m => ({ default: m.ProjectReports })))
+const ReportsHub = lazyWithRetry(() => import('./pages/Reports/ReportsHub').then(m => ({ default: m.ReportsHub })))
+const SitePlans = lazyWithRetry(() => import('./pages/SitePlans/SitePlans').then(m => ({ default: m.SitePlans })))
+const SitePhotos = lazyWithRetry(() => import('./pages/SitePhotos/SitePhotos').then(m => ({ default: m.SitePhotos })))
+const ExpenseCharts = lazyWithRetry(() => import('./pages/Charts/ExpenseCharts').then(m => ({ default: m.ExpenseCharts })))
+const Settings = lazyWithRetry(() => import('./pages/Settings/Settings').then(m => ({ default: m.Settings })))
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={<PageLoader />}>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
@@ -105,5 +126,6 @@ export default function App() {
         />
       </AuthProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   )
 }
