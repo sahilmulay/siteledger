@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Plus, Filter, Trash2, Receipt, ExternalLink, Search,
-  Download, MessageSquare, FileText, Phone, X, RefreshCw, Edit
+  Download, FileText, Phone, X, RefreshCw, Edit
 } from 'lucide-react'
+import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useProjects } from '../../hooks/useProjects'
 import { useAuth } from '../../contexts/AuthContext'
@@ -409,8 +410,8 @@ Thank you!`
                             <button onClick={() => handleDownloadVoucher(item)} title="Download PDF" className="p-1 text-gray-500 hover:bg-gray-100 rounded">
                               <FileText className="h-3.5 w-3.5" />
                             </button>
-                            <button onClick={() => sendWhatsAppReceipt(item)} title="WhatsApp Receipt" className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
-                              <MessageSquare className="h-3.5 w-3.5" />
+                            <button onClick={() => sendWhatsAppReceipt(item)} title="Share on WhatsApp" className="p-1 hover:bg-emerald-50 rounded transition-transform active:scale-95 flex items-center justify-center">
+                              <WhatsAppIcon className="h-4 w-4" />
                             </button>
                             <button onClick={() => navigate(`/projects/${projectId}/expenses/${item.id}/edit`)} title="Edit Expense" className="p-1 text-indigo-600 hover:bg-indigo-50 rounded">
                               <Edit className="h-3.5 w-3.5" />
@@ -441,8 +442,8 @@ Thank you!`
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl animate-scale-up">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                <MessageSquare className="h-4 w-4 text-emerald-600" />
+              <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <WhatsAppIcon className="h-5 w-5" />
                 Send WhatsApp Receipt
               </h4>
               <button
@@ -475,7 +476,7 @@ Thank you!`
               <Button
                 size="sm"
                 fullWidth
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5"
                 onClick={() => {
                   const clean = promptPhoneInput.replace(/\D/g, '')
                   if (clean.length < 10) {
@@ -487,7 +488,8 @@ Thank you!`
                   setPromptPhoneInput('')
                 }}
               >
-                Send via WhatsApp
+                <WhatsAppIcon className="h-4 w-4" />
+                <span>Send via WhatsApp</span>
               </Button>
             </div>
           </div>
