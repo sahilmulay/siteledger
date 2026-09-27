@@ -71,6 +71,25 @@ export function useExpenses() {
     }
   }, [])
 
+  const fetchExpense = useCallback(async (id) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', id)
+        .single()
+      if (error) throw error
+      return data
+    } catch (err) {
+      setError(err.message)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   const updateExpense = useCallback(async (id, updates) => {
     setLoading(true)
     setError(null)
@@ -124,7 +143,7 @@ export function useExpenses() {
     return publicUrl
   }, [])
 
-  return { loading, error, fetchExpenses, addExpense, updateExpense, deleteExpense, uploadBillImage }
+  return { loading, error, fetchExpenses, fetchExpense, addExpense, updateExpense, deleteExpense, uploadBillImage }
 }
 
 async function compressImage(file) {

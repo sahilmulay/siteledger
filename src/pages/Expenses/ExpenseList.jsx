@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Plus, Filter, Trash2, Receipt, ExternalLink, Search,
-  Download, MessageSquare, FileText, Phone, X, RefreshCw
+  Download, MessageSquare, FileText, Phone, X, RefreshCw, Edit
 } from 'lucide-react'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useProjects } from '../../hooks/useProjects'
@@ -342,89 +342,88 @@ Thank you!`
           />
         ) : (
           <div className="space-y-3">
-            {filteredExpenses.map(item => {
-              const vendorMobile = item.vendor_mobile || (item.remarks?.match(/Phone:\s*(\d{10})/)?.[1])
-              return (
-                <Card key={item.id}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <Badge color={CATEGORY_BADGE_COLORS[item.category] || 'gray'}>{item.category}</Badge>
-                        {item.sub_category && (
-                          <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full">
-                            {item.sub_category}
+            {useMemo(() => {
+              const groups = {}
+              filteredExpenses.forEach(exp => {
+                const dateStr = formatDate(exp.expense_date)
+                if (!groups[dateStr]) groups[dateStr] = []
+                groups[dateStr].push(exp)
+              })
+              return Object.entries(groups)
+            }, [filteredExpenses]).map(([dateKey, items]) => (
+              <div key={dateKey} className="mb-5">
+                <div className="sticky top-14 z-10 bg-gray-50/95 backdrop-blur py-1.5 mb-2 px-1">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{dateKey}</span>
+                </div>
+                <div className="space-y-2">
+                  {items.map(item => {
+                    const vendorMobile = item.vendor_mobile || (item.remarks?.match(/Phone:\s*(\d{10})/)?.[1])
+                    const timeString = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    
+                    return (
+                      <Card key={item.id} className="p-3 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="min-w-0 flex-1 pr-2">
+                            <h4 className="text-sm font-bold text-gray-900 truncate">
+                              {item.vendor_name || item.category} {item.vendor_name && <span className="text-gray-400 font-normal">({item.category})</span>}
+                            </h4>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-bold text-red-600">{formatINR(item.amount)}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                          <span className="text-[10px] font-medium bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                            {item.sub_category || item.category}
                           </span>
-                        )}
-                      </div>
-
-                      <p className="text-lg font-bold text-red-700">{formatINR(item.amount)}</p>
-
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge color="gray">{item.payment_mode}</Badge>
-                        <span className="text-xs text-gray-400">{formatDate(item.expense_date)}</span>
-                        {item.vendor_name && (
-                          <span className="text-xs font-medium text-gray-700">
-                            {item.vendor_name}
+                          <span className="text-[10px] font-medium bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                            {item.payment_mode}
                           </span>
+                          {item.location && (
+                            <span className="text-[10px] font-medium bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
+                              {item.location}
+                            </span>
+                          )}
+                        </div>
+
+                        {item.remarks && (
+                          <p className="text-xs text-gray-700 mb-2 leading-relaxed">
+                            {item.remarks}
+                          </p>
                         )}
-                        {vendorMobile && (
-                          <span className="text-xs text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1 border border-emerald-200">
-                            <Phone className="h-3 w-3" /> {vendorMobile}
-                          </span>
-                        )}
-                      </div>
-
-                      {item.transaction_reference && (
-                        <p className="text-xs text-gray-400 mt-1">Ref: {item.transaction_reference}</p>
-                      )}
-                      {item.remarks && <p className="text-sm text-gray-600 mt-1">{item.remarks}</p>}
-                      {item.bill_number && <p className="text-xs text-gray-400 mt-0.5">Bill: {item.bill_number}</p>}
-                      {item.bill_image_url && (
-                        <a
-                          href={item.bill_image_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                        >
-                          <ExternalLink className="h-3 w-3" /> View Bill
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions Row */}
-                  <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        onClick={() => sendWhatsAppReceipt(item)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-                        title="Send Payment Receipt on WhatsApp"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
-                        <span>WhatsApp Receipt</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleDownloadVoucher(item)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
-                        title="Download Payment Bill PDF"
-                      >
-                        <FileText className="h-3.5 w-3.5 text-gray-500" />
-                        <span>Bill PDF</span>
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => setDeleteTarget(item.id)}
-                      className="p-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex-shrink-0"
-                      title="Delete Expense"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </Card>
-              )
-            })}
+                        
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+                          <div className="text-[10px] font-medium text-emerald-700">
+                            Entry by You <span className="text-gray-400 font-normal">at {timeString}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            {item.bill_image_url && (
+                              <a href={item.bill_image_url} target="_blank" rel="noreferrer" title="View Bill" className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                            <button onClick={() => handleDownloadVoucher(item)} title="Download PDF" className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                              <FileText className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => sendWhatsAppReceipt(item)} title="WhatsApp Receipt" className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => navigate(`/projects/${projectId}/expenses/${item.id}/edit`)} title="Edit Expense" className="p-1 text-indigo-600 hover:bg-indigo-50 rounded">
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => setDeleteTarget(item.id)} title="Delete" className="p-1 text-red-500 hover:bg-red-50 rounded">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
 
             {hasMore && (
               <Button variant="ghost" fullWidth onClick={() => { const np = page + 1; setPage(np); loadExpenses(np) }}>

@@ -79,7 +79,10 @@ export default function App() {
               <ProtectedRoute><ExpenseList /></ProtectedRoute>
             } />
             <Route path="/projects/:id/expenses/new" element={
-              <ProtectedRoute><AddExpense /></ProtectedRoute>
+              <ProtectedRoute><AddExpense mode="create" /></ProtectedRoute>
+            } />
+            <Route path="/projects/:id/expenses/:expenseId/edit" element={
+              <ProtectedRoute><AddExpense mode="edit" /></ProtectedRoute>
             } />
             <Route path="/projects/:id/reports" element={
               <ProtectedRoute><ProjectReports /></ProtectedRoute>

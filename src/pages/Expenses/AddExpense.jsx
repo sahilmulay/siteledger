@@ -15,10 +15,10 @@ import { EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../lib/constants'
 import { todayInputDate } from '../../lib/formatters'
 import { parseContactNumbers } from '../../lib/contactHelper'
 
-export function AddExpense() {
-  const { id: projectId } = useParams()
+export function AddExpense({ mode = 'create' }) {
+  const { id: projectId, expenseId } = useParams()
   const navigate = useNavigate()
-  const { addExpense, uploadBillImage } = useExpenses()
+  const { addExpense, updateExpense, fetchExpense, uploadBillImage } = useExpenses()
   const { user, categories: userCategories, vendors = [], updateCategories } = useAuth()
 
   const categories = (userCategories && Object.keys(userCategories).length > 0)
@@ -39,10 +39,22 @@ export function AddExpense() {
   const suggestionRef = useRef(null)
 
   const {
-    register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }
+    register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting }
   } = useForm({
     defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash', vendor_name: '', vendor_mobile: '' }
   })
+
+  useEffect(() => {
+    if (mode === 'edit' && expenseId) {
+      fetchExpense(expenseId).then(data => {
+        if (data) {
+          reset(data)
+          if (data.bill_image_url) setBillPreview(data.bill_image_url)
+          // Ensure category is in list, if not we could set custom category, but let's assume valid for now
+        }
+      })
+    }
+  }, [mode, expenseId, fetchExpense, reset])
 
   const watchCategory = watch('category')
   const watchSubCategory = watch('sub_category')
@@ -162,7 +174,7 @@ export function AddExpense() {
         setUploading(false)
       }
 
-      await addExpense(projectId, {
+      let payload = {
         category: finalCategory,
         sub_category: finalSubCategory,
         amount: parseFloat(data.amount),
@@ -172,9 +184,16 @@ export function AddExpense() {
         vendor_mobile: data.vendor_mobile ? data.vendor_mobile.replace(/\D/g, '').slice(-10) : null,
         expense_date: data.expense_date,
         remarks: data.remarks || null,
-        location: data.location || null,
-        bill_image_url: billImageUrl
-      })
+        location: data.location || null
+      }
+      
+      if (billImageUrl) payload.bill_image_url = billImageUrl
+
+      if (mode === 'edit' && expenseId) {
+        await updateExpense(expenseId, payload)
+      } else {
+        await addExpense(projectId, payload)
+      }
 
       // Update global categories silently if new ones were added
       let updatedCats = { ...categories }
@@ -205,17 +224,17 @@ export function AddExpense() {
         }
       }
 
-      toast.success('Expense added successfully!')
+      toast.success(mode === 'edit' ? 'Expense updated successfully!' : 'Expense added successfully!')
       navigate(`/projects/${projectId}`)
     } catch (err) {
       setUploading(false)
-      toast.error(err.message || 'Failed to add expense')
+      toast.error(err.message || `Failed to ${mode === 'edit' ? 'update' : 'add'} expense`)
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Add Expense" subtitle="Record a new expense" backTo={`/projects/${projectId}`} />
+      <Header title={mode === 'edit' ? 'Edit Expense' : 'Add Expense'} subtitle={mode === 'edit' ? 'Update expense details' : 'Record a new expense'} backTo={`/projects/${projectId}/expenses`} />
       <PageWrapper>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Card>
@@ -453,7 +472,7 @@ export function AddExpense() {
               Cancel
             </Button>
             <Button type="submit" variant="danger" fullWidth loading={isSubmitting || uploading}>
-              {uploading ? 'Uploading...' : 'Save Expense'}
+              {uploading ? 'Uploading...' : (mode === 'edit' ? 'Save Changes' : 'Save Expense')}
             </Button>
           </div>
         </form>

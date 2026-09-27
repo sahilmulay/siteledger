@@ -58,7 +58,7 @@ function describeArc(cx, cy, r, innerR, startAngle, endAngle) {
 }
 
 // ── Donut Pie Component ─────────────────────────────────────
-function DonutPieChart({ data, total, selectedItem, onSelect }) {
+function DonutPieChart({ data, total, selectedItem, onSelect, valueFormatter = formatINR, labelTotal = 'Total' }) {
   const size = 260
   const center = size / 2
   const radius = 100
@@ -136,7 +136,7 @@ function DonutPieChart({ data, total, selectedItem, onSelect }) {
                     {active.label}
                   </span>
                   <span className="text-base font-bold text-gray-900 mt-0.5">
-                    {formatINR(active.value)}
+                    {valueFormatter(active.value)}
                   </span>
                   <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mt-1">
                     {active.percentage.toFixed(1)}%
@@ -147,10 +147,10 @@ function DonutPieChart({ data, total, selectedItem, onSelect }) {
           ) : (
             <>
               <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-                Total
+                {labelTotal}
               </span>
               <span className="text-base font-bold text-gray-900 mt-0.5">
-                {formatINR(total)}
+                {valueFormatter(total)}
               </span>
               <span className="text-[10px] text-gray-400 mt-0.5">
                 {data.length} {data.length === 1 ? 'slice' : 'slices'}
@@ -168,7 +168,7 @@ function DonutPieChart({ data, total, selectedItem, onSelect }) {
 }
 
 // ── Breakdown List Table ────────────────────────────────────
-function BreakdownList({ data, total, selectedItem, onSelect }) {
+function BreakdownList({ data, total, selectedItem, onSelect, valueFormatter = formatINR }) {
   return (
     <div className="space-y-2.5 mt-4">
       {data.map((item, idx) => {
@@ -201,7 +201,7 @@ function BreakdownList({ data, total, selectedItem, onSelect }) {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="text-xs font-bold text-gray-900">
-                  {formatINR(item.value)}
+                  {valueFormatter(item.value)}
                 </span>
                 <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                   {item.percentage.toFixed(1)}%
@@ -299,6 +299,23 @@ export function ExpenseCharts() {
       .sort((a, b) => b.value - a.value)
   }, [expenses, totalExpenses])
 
+  const areaData = useMemo(() => {
+    if (!project || !project.floor_areas || project.floor_areas.length === 0) return null
+    const validFloors = project.floor_areas.filter(f => Number(f.area) > 0)
+    if (validFloors.length === 0) return null
+    
+    const totalArea = validFloors.reduce((sum, f) => sum + Number(f.area), 0)
+    return {
+      total: totalArea,
+      data: validFloors.map((f, idx) => ({
+        label: f.floor_name || `Floor ${idx + 1}`,
+        value: Number(f.area),
+        percentage: (Number(f.area) / totalArea) * 100,
+        color: CATEGORY_PALETTE[idx % CATEGORY_PALETTE.length]
+      }))
+    }
+  }, [project])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -352,7 +369,8 @@ export function ExpenseCharts() {
           {[
             { id: 'both', label: 'All Charts' },
             { id: 'category', label: 'Category' },
-            { id: 'subcategory', label: 'Sub-Category' }
+            { id: 'subcategory', label: 'Sub-Category' },
+            ...(areaData ? [{ id: 'area', label: 'Area' }] : [])
           ].map(tab => (
             <button
               key={tab.id}
@@ -453,6 +471,40 @@ export function ExpenseCharts() {
                   total={totalExpenses}
                   selectedItem={selectedSubCategory}
                   onSelect={setSelectedSubCategory}
+                />
+              </Card>
+            )}
+
+            {/* ── 3. Area Breakdown Section ── */}
+            {areaData && (activeTab === 'both' || activeTab === 'area') && (
+              <Card>
+                <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                      <PieIcon className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">Project Area Breakdown</h3>
+                      <p className="text-[11px] text-gray-400">Total {areaData.total} sq ft</p>
+                    </div>
+                  </div>
+                </div>
+
+                <DonutPieChart
+                  data={areaData.data}
+                  total={areaData.total}
+                  selectedItem={null}
+                  onSelect={() => {}}
+                  valueFormatter={(val) => `${val} sqft`}
+                  labelTotal="Total Area"
+                />
+
+                <BreakdownList
+                  data={areaData.data}
+                  total={areaData.total}
+                  selectedItem={null}
+                  onSelect={() => {}}
+                  valueFormatter={(val) => `${val} sqft`}
                 />
               </Card>
             )}
