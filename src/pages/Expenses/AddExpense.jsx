@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Upload, X, Image, Users, BookUser, Search, Plus, UserPlus, Check } from 'lucide-react'
+import { Upload, X, Image, Users, BookUser, Search, Plus, UserPlus, Check, ChevronDown } from 'lucide-react'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -31,6 +31,14 @@ export function AddExpense({ mode = 'create' }) {
   const [billPreview, setBillPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
 
+  // Category & Sub-Category Autocomplete state
+  const [showCategorySuggestions, setShowCategorySuggestions] = useState(false)
+  const [showSubCategorySuggestions, setShowSubCategorySuggestions] = useState(false)
+  const [newCategoryModal, setNewCategoryModal] = useState(null)
+  const [newSubCategoryModal, setNewSubCategoryModal] = useState(null)
+  const categoryRef = useRef(null)
+  const subCategoryRef = useRef(null)
+
   // Vendor Search & Autocomplete state
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [vendorSearchModal, setVendorSearchModal] = useState(false)
@@ -42,7 +50,7 @@ export function AddExpense({ mode = 'create' }) {
   const {
     register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting }
   } = useForm({
-    defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash', vendor_name: '', vendor_mobile: '' }
+    defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash', category: '', sub_category: '', vendor_name: '', vendor_mobile: '' }
   })
 
   useEffect(() => {
@@ -57,10 +65,106 @@ export function AddExpense({ mode = 'create' }) {
     }
   }, [mode, expenseId, fetchExpense, reset])
 
-  const watchCategory = watch('category')
-  const watchSubCategory = watch('sub_category')
+  const watchCategory = watch('category') || ''
+  const trimmedCategory = watchCategory.trim()
+  const watchSubCategory = watch('sub_category') || ''
+  const trimmedSubCategory = watchSubCategory.trim()
   const watchVendorName = watch('vendor_name') || ''
   const trimmedVendorName = watchVendorName.trim()
+
+  const isCategorySaved = useMemo(() => {
+    if (!trimmedCategory) return false
+    return Object.keys(categories).some(c => c.toLowerCase() === trimmedCategory.toLowerCase())
+  }, [trimmedCategory, categories])
+
+  const matchingCategories = useMemo(() => {
+    const all = Object.keys(categories)
+    if (!trimmedCategory) return all
+    const q = trimmedCategory.toLowerCase()
+    return all.filter(c => c.toLowerCase().includes(q))
+  }, [trimmedCategory, categories])
+
+  const isSubCategorySaved = useMemo(() => {
+    if (!trimmedSubCategory) return false
+    const currentSubs = trimmedCategory && categories[trimmedCategory]
+      ? categories[trimmedCategory]
+      : Array.from(new Set(Object.values(categories).flat()))
+    return currentSubs.some(s => s.toLowerCase() === trimmedSubCategory.toLowerCase())
+  }, [trimmedSubCategory, trimmedCategory, categories])
+
+  const matchingSubCategories = useMemo(() => {
+    const currentSubs = trimmedCategory && categories[trimmedCategory]
+      ? categories[trimmedCategory]
+      : Array.from(new Set(Object.values(categories).flat()))
+    if (!trimmedSubCategory) return currentSubs
+    const q = trimmedSubCategory.toLowerCase()
+    return currentSubs.filter(s => s.toLowerCase().includes(q))
+  }, [trimmedSubCategory, trimmedCategory, categories])
+
+  const saveCategoryToDirectory = async (categoryName) => {
+    const cleanName = (categoryName || '').trim()
+    if (!cleanName) return false
+
+    const existing = Object.keys(categories).find(c => c.toLowerCase() === cleanName.toLowerCase())
+    if (existing) {
+      setValue('category', existing, { shouldValidate: true })
+      toast.success(`Category "${existing}" selected`)
+      return true
+    }
+
+    const updated = {
+      ...categories,
+      [cleanName]: []
+    }
+
+    try {
+      if (updateCategories) {
+        await updateCategories(updated)
+      }
+      setValue('category', cleanName, { shouldValidate: true })
+      toast.success(`Category "${cleanName}" added!`)
+      return true
+    } catch (err) {
+      console.error('Failed to save category:', err)
+      toast.error('Failed to add category')
+      return false
+    }
+  }
+
+  const saveSubCategoryToDirectory = async (subName, targetCat) => {
+    const cleanSub = (subName || '').trim()
+    if (!cleanSub) return false
+    const cat = (targetCat || trimmedCategory || Object.keys(categories)[0] || 'Miscellaneous').trim()
+
+    const currentSubs = categories[cat] || []
+    const existing = currentSubs.find(s => s.toLowerCase() === cleanSub.toLowerCase())
+    if (existing) {
+      setValue('sub_category', existing, { shouldValidate: true })
+      toast.success(`Sub-category "${existing}" selected`)
+      return true
+    }
+
+    const updated = {
+      ...categories,
+      [cat]: [...currentSubs, cleanSub]
+    }
+
+    try {
+      if (updateCategories) {
+        await updateCategories(updated)
+      }
+      if (!trimmedCategory || trimmedCategory.toLowerCase() !== cat.toLowerCase()) {
+        setValue('category', cat, { shouldValidate: true })
+      }
+      setValue('sub_category', cleanSub, { shouldValidate: true })
+      toast.success(`Sub-category "${cleanSub}" added under ${cat}!`)
+      return true
+    } catch (err) {
+      console.error('Failed to save sub-category:', err)
+      toast.error('Failed to add sub-category')
+      return false
+    }
+  }
 
   const isVendorSaved = useMemo(() => {
     if (!trimmedVendorName || !vendors || vendors.length === 0) return false
@@ -143,6 +247,12 @@ export function AddExpense({ mode = 'create' }) {
     const handleClickOutside = (e) => {
       if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
         setShowSuggestions(false)
+      }
+      if (categoryRef.current && !categoryRef.current.contains(e.target)) {
+        setShowCategorySuggestions(false)
+      }
+      if (subCategoryRef.current && !subCategoryRef.current.contains(e.target)) {
+        setShowSubCategorySuggestions(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -258,14 +368,12 @@ export function AddExpense({ mode = 'create' }) {
       let updatedCats = { ...categories }
       let catsChanged = false
 
-      if (data.category === 'Other' && finalCategory) {
-        if (!updatedCats[finalCategory]) {
-          updatedCats[finalCategory] = []
-          catsChanged = true
-        }
+      if (finalCategory && !updatedCats[finalCategory]) {
+        updatedCats[finalCategory] = []
+        catsChanged = true
       }
 
-      if (finalCategory && data.sub_category === 'Other' && finalSubCategory) {
+      if (finalCategory && finalSubCategory) {
         if (!updatedCats[finalCategory]) {
           updatedCats[finalCategory] = []
         }
@@ -320,62 +428,265 @@ export function AddExpense({ mode = 'create' }) {
                 error={errors.amount?.message}
               />
 
-              <Select
-                label="Category"
-                required
-                {...register('category', { required: 'Category is required' })}
-                error={errors.category?.message}
-                onChange={(e) => {
-                  setValue('category', e.target.value)
-                  setValue('sub_category', '')
-                  setCustomCategory('')
-                  setCustomSubCategory('')
-                }}
-              >
-                <option value="">Select Category</option>
-                {Object.keys(categories).map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-                <option value="Other">+ Add New Category</option>
-              </Select>
+              {/* Category input with autocomplete & add-new */}
+              <div className="relative" ref={categoryRef}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCategorySuggestions(false)
+                      setNewCategoryModal({ name: trimmedCategory || '' })
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm"
+                    title="Add new category"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add Category</span>
+                  </button>
+                </div>
 
-              {watchCategory === 'Other' && (
-                <Input
-                  label="New Category Name *"
-                  placeholder="e.g. Site Cleaning, Municipal Fees, Tea/Snacks"
-                  required
-                  value={customCategory}
-                  onChange={e => setCustomCategory(e.target.value)}
-                />
-              )}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Select or type category (e.g. Materials, Labour)"
+                    autoComplete="off"
+                    {...register('category', {
+                      required: 'Category is required',
+                      onChange: () => {
+                        if (!showCategorySuggestions) setShowCategorySuggestions(true)
+                      }
+                    })}
+                    onFocus={() => setShowCategorySuggestions(true)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[48px] pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCategorySuggestions(prev => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showCategorySuggestions ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+                {errors.category?.message && (
+                  <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
+                )}
 
-              {/* Sub Category Selection */}
-              {watchCategory && (
-                <Select 
-                  label="Sub-Category" 
-                  {...register('sub_category')}
-                  onChange={(e) => {
-                    setValue('sub_category', e.target.value)
-                    setCustomSubCategory('')
-                  }}
-                >
-                  <option value="">Select Sub-Category (Optional)</option>
-                  {watchCategory !== 'Other' && categories[watchCategory] && categories[watchCategory].map(sub => (
-                    <option key={sub} value={sub}>{sub}</option>
-                  ))}
-                  <option value="Other">+ Add New Sub-Category</option>
-                </Select>
-              )}
+                {/* Category Dropdown */}
+                {showCategorySuggestions && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-60 overflow-y-auto">
+                    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-semibold text-gray-500">
+                      <span>Available Categories</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowCategorySuggestions(false)}
+                        className="text-gray-400 hover:text-gray-600 p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
 
-              {watchSubCategory === 'Other' && (
-                <Input
-                  label="New Sub-Category Name *"
-                  placeholder="e.g. Labour, Material"
-                  required
-                  value={customSubCategory}
-                  onChange={e => setCustomSubCategory(e.target.value)}
-                />
-              )}
+                    {matchingCategories.map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          setValue('category', cat, { shouldValidate: true })
+                          setValue('sub_category', '')
+                          setShowCategorySuggestions(false)
+                        }}
+                        className={`w-full text-left px-3.5 py-2.5 hover:bg-blue-50 active:bg-blue-100 transition-colors border-b last:border-0 border-gray-50 flex items-center justify-between group ${watchCategory === cat ? 'bg-blue-50/60 font-semibold text-blue-700' : 'text-gray-900'}`}
+                      >
+                        <span className="text-sm truncate">{cat}</span>
+                        {watchCategory === cat ? (
+                          <span className="text-xs text-blue-600 font-semibold">Selected</span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-gray-400 group-hover:text-blue-600">Select</span>
+                        )}
+                      </button>
+                    ))}
+
+                    {trimmedCategory && !isCategorySaved && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCategorySuggestions(false)
+                          setNewCategoryModal({ name: trimmedCategory })
+                        }}
+                        className="w-full text-left px-3.5 py-2.5 bg-blue-50/90 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center justify-between border-t border-blue-100 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5 truncate pr-2">
+                          <Plus className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <span>Add <strong>"{trimmedCategory}"</strong> as New Category</span>
+                        </span>
+                        <span className="text-[11px] bg-blue-600 text-white font-semibold px-2.5 py-1 rounded-lg flex-shrink-0 shadow-sm">
+                          + Add
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Inline banner when typed category is not in list */}
+                {trimmedCategory && !isCategorySaved && (
+                  <div className="mt-1.5 flex items-center justify-between gap-2 p-2 px-3 bg-blue-50/90 border border-blue-200/90 rounded-xl text-xs text-blue-900 shadow-sm animate-fadeIn">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                      <Plus className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">
+                        <strong>"{trimmedCategory}"</strong> not in categories
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNewCategoryModal({ name: trimmedCategory })}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg shadow-sm transition-all flex-shrink-0"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Add Category</span>
+                    </button>
+                  </div>
+                )}
+                {trimmedCategory && isCategorySaved && (
+                  <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-700 px-1">
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Saved Category</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sub-Category input with autocomplete & add-new */}
+              <div className="relative" ref={subCategoryRef}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Sub-Category <span className="text-gray-400 font-normal text-xs">(Optional)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSubCategorySuggestions(false)
+                      setNewSubCategoryModal({
+                        name: trimmedSubCategory || '',
+                        category: trimmedCategory || Object.keys(categories)[0] || 'Materials'
+                      })
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm"
+                    title="Add new sub-category"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add Sub-Category</span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={trimmedCategory ? `Select or type sub-category for ${trimmedCategory}` : "Select or type sub-category"}
+                    autoComplete="off"
+                    {...register('sub_category', {
+                      onChange: () => {
+                        if (!showSubCategorySuggestions) setShowSubCategorySuggestions(true)
+                      }
+                    })}
+                    onFocus={() => setShowSubCategorySuggestions(true)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[48px] pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSubCategorySuggestions(prev => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showSubCategorySuggestions ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+
+                {/* Sub-Category Dropdown */}
+                {showSubCategorySuggestions && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-60 overflow-y-auto">
+                    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-semibold text-gray-500">
+                      <span>Available Sub-Categories {trimmedCategory ? `(${trimmedCategory})` : ''}</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSubCategorySuggestions(false)}
+                        className="text-gray-400 hover:text-gray-600 p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    {matchingSubCategories.map(sub => (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => {
+                          setValue('sub_category', sub, { shouldValidate: true })
+                          setShowSubCategorySuggestions(false)
+                        }}
+                        className={`w-full text-left px-3.5 py-2.5 hover:bg-blue-50 active:bg-blue-100 transition-colors border-b last:border-0 border-gray-50 flex items-center justify-between group ${watchSubCategory === sub ? 'bg-blue-50/60 font-semibold text-blue-700' : 'text-gray-900'}`}
+                      >
+                        <span className="text-sm truncate">{sub}</span>
+                        {watchSubCategory === sub ? (
+                          <span className="text-xs text-blue-600 font-semibold">Selected</span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-gray-400 group-hover:text-blue-600">Select</span>
+                        )}
+                      </button>
+                    ))}
+
+                    {trimmedSubCategory && !isSubCategorySaved && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSubCategorySuggestions(false)
+                          setNewSubCategoryModal({
+                            name: trimmedSubCategory,
+                            category: trimmedCategory || Object.keys(categories)[0] || 'Materials'
+                          })
+                        }}
+                        className="w-full text-left px-3.5 py-2.5 bg-blue-50/90 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center justify-between border-t border-blue-100 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5 truncate pr-2">
+                          <Plus className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <span>Add <strong>"{trimmedSubCategory}"</strong> as New Sub-Category</span>
+                        </span>
+                        <span className="text-[11px] bg-blue-600 text-white font-semibold px-2.5 py-1 rounded-lg flex-shrink-0 shadow-sm">
+                          + Add
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Inline banner when typed sub-category is not in list */}
+                {trimmedSubCategory && !isSubCategorySaved && (
+                  <div className="mt-1.5 flex items-center justify-between gap-2 p-2 px-3 bg-blue-50/90 border border-blue-200/90 rounded-xl text-xs text-blue-900 shadow-sm animate-fadeIn">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                      <Plus className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">
+                        <strong>"{trimmedSubCategory}"</strong> not in sub-categories
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNewSubCategoryModal({
+                        name: trimmedSubCategory,
+                        category: trimmedCategory || Object.keys(categories)[0] || 'Miscellaneous'
+                      })}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg shadow-sm transition-all flex-shrink-0"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Add Sub-Category</span>
+                    </button>
+                  </div>
+                )}
+                {trimmedSubCategory && isSubCategorySaved && (
+                  <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-700 px-1">
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Saved Sub-Category</span>
+                  </div>
+                )}
+              </div>
 
               {/* Pre-Loaded Vendor Selection & Contacts */}
               <div className="space-y-2 pt-1 border-t border-gray-100">
@@ -828,6 +1139,179 @@ export function AddExpense({ mode = 'create' }) {
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 >
                   Save Vendor
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal to Add New Category */}
+      {newCategoryModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl animate-scale-up">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <Plus className="h-4 w-4 text-blue-600" />
+                Add New Category
+              </h4>
+              <button
+                type="button"
+                onClick={() => setNewCategoryModal(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4">
+              Create a new category to organize your project expenses.
+            </p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const name = (newCategoryModal.name || '').trim()
+                if (!name) {
+                  toast.error('Category name is required')
+                  return
+                }
+                const saved = await saveCategoryToDirectory(name)
+                if (saved) {
+                  setNewCategoryModal(null)
+                }
+              }}
+              className="space-y-3.5"
+            >
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  placeholder="e.g. Site Cleaning, Municipal Fees"
+                  value={newCategoryModal.name || ''}
+                  onChange={e => setNewCategoryModal(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => setNewCategoryModal(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  fullWidth
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                >
+                  Save Category
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal to Add New Sub-Category */}
+      {newSubCategoryModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl animate-scale-up">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <Plus className="h-4 w-4 text-blue-600" />
+                Add New Sub-Category
+              </h4>
+              <button
+                type="button"
+                onClick={() => setNewSubCategoryModal(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4">
+              Add a sub-item under a category (e.g. Cement under Materials).
+            </p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const name = (newSubCategoryModal.name || '').trim()
+                if (!name) {
+                  toast.error('Sub-category name is required')
+                  return
+                }
+                const cat = (newSubCategoryModal.category || '').trim()
+                if (!cat) {
+                  toast.error('Please select a parent category')
+                  return
+                }
+                const saved = await saveSubCategoryToDirectory(name, cat)
+                if (saved) {
+                  setNewSubCategoryModal(null)
+                }
+              }}
+              className="space-y-3.5"
+            >
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
+                  Parent Category *
+                </label>
+                <select
+                  value={newSubCategoryModal.category || Object.keys(categories)[0] || 'Miscellaneous'}
+                  onChange={e => setNewSubCategoryModal(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                  required
+                >
+                  {Object.keys(categories).map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
+                  Sub-Category Name *
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  placeholder="e.g. Cement, Centring, Excavator"
+                  value={newSubCategoryModal.name || ''}
+                  onChange={e => setNewSubCategoryModal(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => setNewSubCategoryModal(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  fullWidth
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                >
+                  Save Sub-Category
                 </Button>
               </div>
             </form>
