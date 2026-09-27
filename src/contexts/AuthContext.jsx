@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { EXPENSE_CATEGORIES } from '../lib/constants'
+import { clearCache } from '../lib/cache'
 
 const AuthContext = createContext(null)
 
@@ -116,6 +117,7 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = async () => {
+    clearCache()
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }

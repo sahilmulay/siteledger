@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { invalidateCache } from '../lib/cache'
 
 export function useExpenses() {
   const [loading, setLoading] = useState(false)
@@ -62,6 +63,7 @@ export function useExpenses() {
         }
         throw error
       }
+      invalidateCache(`stats:${projectId}`)
       return data
     } catch (err) {
       setError(err.message)
@@ -101,6 +103,7 @@ export function useExpenses() {
         .select()
         .single()
       if (error) throw error
+      if (data?.project_id) invalidateCache(`stats:${data.project_id}`)
       return data
     } catch (err) {
       setError(err.message)
@@ -110,12 +113,13 @@ export function useExpenses() {
     }
   }, [])
 
-  const deleteExpense = useCallback(async (id) => {
+  const deleteExpense = useCallback(async (id, projectId) => {
     setLoading(true)
     setError(null)
     try {
       const { error } = await supabase.from('expenses').delete().eq('id', id)
       if (error) throw error
+      if (projectId) invalidateCache(`stats:${projectId}`)
     } catch (err) {
       setError(err.message)
       throw err

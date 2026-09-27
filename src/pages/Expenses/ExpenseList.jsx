@@ -74,7 +74,7 @@ export function ExpenseList() {
     if (!deleteTarget) return
     setDeleteLoading(true)
     try {
-      await deleteExpense(deleteTarget)
+      await deleteExpense(deleteTarget, projectId)
       setExpenses(prev => prev.filter(e => e.id !== deleteTarget))
       toast.success('Expense deleted successfully!')
     } catch {

@@ -14,6 +14,7 @@ import { formatINR, formatDate } from '../../lib/formatters'
 import { PROJECT_STATUSES } from '../../lib/constants'
 import { generateAllProjectsPDF } from '../../lib/pdfReport'
 import toast from 'react-hot-toast'
+import { supabase } from '../../lib/supabase'
 
 export function ProjectList() {
   const navigate = useNavigate()
@@ -29,15 +30,44 @@ export function ProjectList() {
   const loadProjects = useCallback(async () => {
     const data = await fetchProjects()
     setProjects(data)
-    // Load stats for all projects
+    if (data.length === 0) return
+
+    // Bulk-load stats: 2 queries total instead of 2 per project
     setStatsLoading(true)
-    const statsMap = {}
-    await Promise.all(data.map(async (p) => {
-      statsMap[p.id] = await fetchProjectStats(p.id)
-    }))
-    setStats(statsMap)
-    setStatsLoading(false)
-  }, [fetchProjects, fetchProjectStats])
+    try {
+      const projectIds = data.map(p => p.id)
+      const [incomeRes, expenseRes] = await Promise.all([
+        supabase.from('income').select('project_id, amount').in('project_id', projectIds),
+        supabase.from('expenses').select('project_id, amount, category, expense_date').in('project_id', projectIds)
+      ])
+      const incomeRows = incomeRes.data || []
+      const expenseRows = expenseRes.data || []
+
+      const statsMap = {}
+      data.forEach(p => {
+        statsMap[p.id] = { totalReceived: 0, totalExpenses: 0, balance: 0, expenseCount: 0, lastTransactionDate: null, categoryBreakdown: {} }
+      })
+      incomeRows.forEach(r => {
+        if (statsMap[r.project_id]) statsMap[r.project_id].totalReceived += Number(r.amount)
+      })
+      expenseRows.forEach(r => {
+        if (!statsMap[r.project_id]) return
+        statsMap[r.project_id].totalExpenses += Number(r.amount)
+        statsMap[r.project_id].expenseCount += 1
+        const cat = r.category || 'Other'
+        statsMap[r.project_id].categoryBreakdown[cat] = (statsMap[r.project_id].categoryBreakdown[cat] || 0) + Number(r.amount)
+        if (!statsMap[r.project_id].lastTransactionDate || r.expense_date > statsMap[r.project_id].lastTransactionDate) {
+          statsMap[r.project_id].lastTransactionDate = r.expense_date
+        }
+      })
+      data.forEach(p => {
+        statsMap[p.id].balance = statsMap[p.id].totalReceived - statsMap[p.id].totalExpenses
+      })
+      setStats(statsMap)
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [fetchProjects])
 
   useEffect(() => { loadProjects() }, [loadProjects])
 

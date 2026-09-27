@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { getCached, setCached, invalidateCache } from '../lib/cache'
 
 export function useProjects() {
   const { user } = useAuth()
@@ -9,6 +10,9 @@ export function useProjects() {
 
   const fetchProjects = useCallback(async () => {
     if (!user) return []
+    const cacheKey = `projects:${user.id}`
+    const cached = getCached(cacheKey)
+    if (cached) return cached
     setLoading(true)
     setError(null)
     try {
@@ -18,7 +22,9 @@ export function useProjects() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return data || []
+      const result = data || []
+      setCached(cacheKey, result)
+      return result
     } catch (err) {
       setError(err.message)
       return []
@@ -28,6 +34,9 @@ export function useProjects() {
   }, [user])
 
   const fetchProject = useCallback(async (id) => {
+    const cacheKey = `project:${id}`
+    const cached = getCached(cacheKey)
+    if (cached) return cached
     setLoading(true)
     setError(null)
     try {
@@ -37,6 +46,7 @@ export function useProjects() {
         .eq('id', id)
         .single()
       if (error) throw error
+      setCached(cacheKey, data)
       return data
     } catch (err) {
       setError(err.message)
@@ -57,6 +67,7 @@ export function useProjects() {
         .select()
         .single()
       if (error) throw error
+      invalidateCache(`projects:${user.id}`)
       return data
     } catch (err) {
       setError(err.message)
@@ -77,6 +88,8 @@ export function useProjects() {
         .select()
         .single()
       if (error) throw error
+      invalidateCache(`project:${id}`)
+      if (user) invalidateCache(`projects:${user.id}`)
       return data
     } catch (err) {
       setError(err.message)
@@ -84,7 +97,7 @@ export function useProjects() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user])
 
   const deleteProject = useCallback(async (id) => {
     setLoading(true)
@@ -92,15 +105,20 @@ export function useProjects() {
     try {
       const { error } = await supabase.from('projects').delete().eq('id', id)
       if (error) throw error
+      invalidateCache(`project:${id}`)
+      if (user) invalidateCache(`projects:${user.id}`)
     } catch (err) {
       setError(err.message)
       throw err
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user])
 
   const fetchProjectStats = useCallback(async (projectId) => {
+    const cacheKey = `stats:${projectId}`
+    const cached = getCached(cacheKey)
+    if (cached) return cached
     try {
       const [incomeRes, expenseRes] = await Promise.all([
         supabase.from('income').select('amount, date').eq('project_id', projectId),
@@ -126,7 +144,7 @@ export function useProjects() {
         ...expenseData.map(r => r.expense_date)
       ].filter(Boolean).sort().reverse()
 
-      return {
+      const result = {
         totalReceived,
         totalExpenses,
         balance,
@@ -135,6 +153,8 @@ export function useProjects() {
         lastTransactionDate: allDates[0] || null,
         categoryBreakdown
       }
+      setCached(cacheKey, result)
+      return result
     } catch (err) {
       console.error('fetchProjectStats error:', err)
       return {
