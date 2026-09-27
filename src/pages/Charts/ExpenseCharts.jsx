@@ -316,6 +316,34 @@ export function ExpenseCharts() {
     }
   }, [project])
 
+  // Cost per sq ft analysis: for each category & sub-category, amount / total_area
+  const totalArea = useMemo(() => {
+    if (!project) return 0
+    if (project.total_area && Number(project.total_area) > 0) return Number(project.total_area)
+    if (project.floor_areas && project.floor_areas.length > 0) {
+      return project.floor_areas.reduce((sum, f) => sum + Number(f.area || 0), 0)
+    }
+    return 0
+  }, [project])
+
+  const costPerSqftByCategory = useMemo(() => {
+    if (!totalArea || totalArea === 0 || totalExpenses === 0) return []
+    return categoryData.map((c, idx) => ({
+      ...c,
+      costPerSqft: c.value / totalArea,
+      color: CATEGORY_PALETTE[idx % CATEGORY_PALETTE.length]
+    })).sort((a, b) => b.costPerSqft - a.costPerSqft)
+  }, [categoryData, totalArea, totalExpenses])
+
+  const costPerSqftBySubCategory = useMemo(() => {
+    if (!totalArea || totalArea === 0 || totalExpenses === 0) return []
+    return subCategoryData.map((s, idx) => ({
+      ...s,
+      costPerSqft: s.value / totalArea,
+      color: SUB_CATEGORY_PALETTE[idx % SUB_CATEGORY_PALETTE.length]
+    })).sort((a, b) => b.costPerSqft - a.costPerSqft)
+  }, [subCategoryData, totalArea, totalExpenses])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -369,8 +397,9 @@ export function ExpenseCharts() {
           {[
             { id: 'both', label: 'All Charts' },
             { id: 'category', label: 'Category' },
-            { id: 'subcategory', label: 'Sub-Category' },
-            ...(areaData ? [{ id: 'area', label: 'Area' }] : [])
+            { id: 'subcategory', label: 'Sub-Cat' },
+            ...(areaData ? [{ id: 'area', label: 'Area' }] : []),
+            ...(totalArea > 0 ? [{ id: 'costsqft', label: '₹/sqft' }] : [])
           ].map(tab => (
             <button
               key={tab.id}
@@ -506,6 +535,110 @@ export function ExpenseCharts() {
                   onSelect={() => {}}
                   valueFormatter={(val) => `${val} sqft`}
                 />
+              </Card>
+            )}
+
+            {/* ── 4. Cost per Sq Ft Analysis ── */}
+            {totalArea > 0 && (activeTab === 'both' || activeTab === 'costsqft') && (
+              <Card>
+                <div className="flex items-center gap-2 mb-3 border-b border-gray-100 pb-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center flex-shrink-0">
+                    <TrendingDown className="h-4 w-4 text-rose-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm">Cost per Sq Ft Analysis</h3>
+                    <p className="text-[11px] text-gray-400">
+                      Total area: <span className="font-semibold text-gray-600">{totalArea} sq ft</span>
+                      &nbsp;·&nbsp;Overall: <span className="font-semibold text-rose-600">
+                        ₹{(totalExpenses / totalArea).toFixed(0)}/sqft
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Overall cost/sqft banner */}
+                <div className="bg-gradient-to-r from-rose-500 to-red-600 rounded-xl p-3 mb-4 text-white flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-semibold text-rose-100 uppercase tracking-wider">Total Cost ÷ Area</p>
+                    <p className="text-xl font-black mt-0.5">₹{(totalExpenses / totalArea).toFixed(2)}<span className="text-sm font-medium text-rose-200 ml-1">/ sq ft</span></p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-rose-200">Total Spent</p>
+                    <p className="text-sm font-bold">{formatINR(totalExpenses)}</p>
+                    <p className="text-[10px] text-rose-200 mt-0.5">{totalArea} sq ft</p>
+                  </div>
+                </div>
+
+                {/* By Category */}
+                {costPerSqftByCategory.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">By Category</p>
+                    <div className="space-y-2.5">
+                      {costPerSqftByCategory.map((item, idx) => {
+                        const barPct = (item.costPerSqft / costPerSqftByCategory[0].costPerSqft) * 100
+                        return (
+                          <div key={idx} className="bg-gray-50 rounded-xl p-2.5 border border-gray-100">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                                <span className="text-xs font-semibold text-gray-800 truncate">{item.label}</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                                <span className="text-xs font-bold text-rose-600">₹{item.costPerSqft.toFixed(2)}/sqft</span>
+                                <span className="text-[10px] text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded">
+                                  {formatINR(item.value)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="h-1.5 rounded-full transition-all"
+                                style={{ width: `${barPct}%`, backgroundColor: item.color }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* By Sub-Category */}
+                {costPerSqftBySubCategory.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">By Sub-Category</p>
+                    <div className="space-y-2">
+                      {costPerSqftBySubCategory.map((item, idx) => {
+                        const barPct = (item.costPerSqft / costPerSqftBySubCategory[0].costPerSqft) * 100
+                        return (
+                          <div key={idx} className="bg-white rounded-lg p-2.5 border border-gray-100">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="min-w-0">
+                                <span className="text-xs font-semibold text-gray-800 block truncate">{item.label}</span>
+                                {item.parentCategory && (
+                                  <span className="text-[10px] text-gray-400">{item.parentCategory}</span>
+                                )}
+                              </div>
+                              <span className="text-xs font-bold text-rose-600 flex-shrink-0 ml-2">₹{item.costPerSqft.toFixed(2)}/sqft</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-1">
+                              <div
+                                className="h-1 rounded-full"
+                                style={{ width: `${barPct}%`, backgroundColor: item.color }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {costPerSqftByCategory.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-4">
+                    Add expenses to see cost per sq ft breakdown
+                  </p>
+                )}
               </Card>
             )}
           </div>
