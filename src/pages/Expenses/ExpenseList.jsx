@@ -99,6 +99,16 @@ export function ExpenseList() {
     return matchCategory || matchSubCategory || matchVendor || matchRemarks || matchPaymentMode || matchRef || matchAmount
   })
 
+  const groupedExpenses = useMemo(() => {
+    const groups = {}
+    filteredExpenses.forEach(exp => {
+      const dateStr = formatDate(exp.expense_date)
+      if (!groups[dateStr]) groups[dateStr] = []
+      groups[dateStr].push(exp)
+    })
+    return Object.entries(groups)
+  }, [filteredExpenses])
+
   const totalShown = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0)
 
   // Collect all unique categories and subcategories
@@ -342,15 +352,7 @@ Thank you!`
           />
         ) : (
           <div className="space-y-3">
-            {useMemo(() => {
-              const groups = {}
-              filteredExpenses.forEach(exp => {
-                const dateStr = formatDate(exp.expense_date)
-                if (!groups[dateStr]) groups[dateStr] = []
-                groups[dateStr].push(exp)
-              })
-              return Object.entries(groups)
-            }, [filteredExpenses]).map(([dateKey, items]) => (
+            {groupedExpenses.map(([dateKey, items]) => (
               <div key={dateKey} className="mb-5">
                 <div className="sticky top-14 z-10 bg-gray-50/95 backdrop-blur py-1.5 mb-2 px-1">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{dateKey}</span>
