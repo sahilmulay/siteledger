@@ -127,14 +127,6 @@ export function AddExpense() {
     }
   }
 
-  const handleSelectSavedVendor = (e) => {
-    const selectedId = e.target.value
-    if (!selectedId) return
-    const v = vendors.find(item => item.id === selectedId)
-    if (v) {
-      selectVendor(v)
-    }
-  }
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -180,6 +172,7 @@ export function AddExpense() {
         vendor_mobile: data.vendor_mobile ? data.vendor_mobile.replace(/\D/g, '').slice(-10) : null,
         expense_date: data.expense_date,
         remarks: data.remarks || null,
+        location: data.location || null,
         bill_image_url: billImageUrl
       })
 
@@ -327,26 +320,6 @@ export function AddExpense() {
                   </div>
                 </div>
 
-                {vendors && vendors.length > 0 && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1 flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5 text-blue-600" />
-                      Quick Pick Saved Vendor
-                    </label>
-                    <select
-                      onChange={handleSelectSavedVendor}
-                      defaultValue=""
-                      className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
-                    >
-                      <option value="">-- Choose from saved directory --</option>
-                      {vendors.map(v => (
-                        <option key={v.id} value={v.id}>
-                          {v.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
 
               {/* Vendor Name input with autocomplete suggestion dropdown */}
@@ -411,6 +384,19 @@ export function AddExpense() {
                 {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
               </Select>
 
+              <Textarea
+                label="Remarks"
+                placeholder="Additional notes (optional)"
+                rows={2}
+                {...register('remarks')}
+              />
+
+              <Input
+                label="Location"
+                placeholder="Enter location (optional)"
+                {...register('location')}
+              />
+
               <Input
                 label="Transaction Reference"
                 placeholder="UPI ID / Cheque No / Bank Ref (optional)"
@@ -459,13 +445,6 @@ export function AddExpense() {
                   </label>
                 )}
               </div>
-
-              <Textarea
-                label="Remarks"
-                placeholder="Additional notes (optional)"
-                rows={2}
-                {...register('remarks')}
-              />
             </div>
           </Card>
 

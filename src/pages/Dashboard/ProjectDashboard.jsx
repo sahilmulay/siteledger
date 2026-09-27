@@ -155,7 +155,7 @@ export function ProjectDashboard() {
               onClick={() => navigate(`/projects/${id}/expenses`)}
             />
             <StatCard
-              label="Site Plans"
+              label="Site Details"
               value={planCount}
               icon={FileIcon}
               color="bg-sky-500"

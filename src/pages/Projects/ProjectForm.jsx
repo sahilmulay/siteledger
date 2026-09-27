@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
@@ -9,6 +9,7 @@ import { Input, Select, Textarea } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PROJECT_STATUSES } from '../../lib/constants'
+import { todayInputDate } from '../../lib/formatters'
 
 export function ProjectForm({ mode = 'create' }) {
   const navigate = useNavigate()
@@ -16,21 +17,48 @@ export function ProjectForm({ mode = 'create' }) {
   const { createProject, updateProject, fetchProject, loading } = useProjects()
 
   const {
-    register, handleSubmit, reset, setValue,
+    register, handleSubmit, reset, setValue, watch, control,
     formState: { errors, isSubmitting }
   } = useForm({
     defaultValues: {
-      project_status: 'Active'
+      project_status: 'Active',
+      start_date: todayInputDate(),
+      floor_areas: []
     }
   })
+
+  const watchFloors = watch('number_of_floors')
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'floor_areas'
+  })
+
+  useEffect(() => {
+    const floors = parseInt(watchFloors) || 0
+    const currentCount = fields.length
+    if (floors > currentCount) {
+      for (let i = currentCount; i < floors; i++) {
+        append({ floor_name: `Floor ${i + 1}`, area: '' })
+      }
+    } else if (floors < currentCount && floors >= 0) {
+      for (let i = currentCount - 1; i >= floors; i--) {
+        remove(i)
+      }
+    }
+  }, [watchFloors, fields.length, append, remove])
 
   useEffect(() => {
     if (mode === 'edit' && id) {
       fetchProject(id).then(data => {
-        if (data) reset(data)
+        if (data) {
+          // If no floor_areas array in existing DB, make sure it's an empty array
+          if (!data.floor_areas) data.floor_areas = []
+          reset(data)
+        }
       })
     }
-  }, [mode, id])
+  }, [mode, id, reset, fetchProject])
 
   const onSubmit = async (data) => {
     try {
@@ -78,6 +106,13 @@ export function ProjectForm({ mode = 'create' }) {
                 {...register('project_name', { required: 'Project name is required', maxLength: { value: 100, message: 'Max 100 characters' } })}
                 error={errors.project_name?.message}
               />
+              <Input
+                label="Start Date"
+                type="date"
+                required
+                {...register('start_date', { required: 'Start date is required' })}
+                error={errors.start_date?.message}
+              />
               <Select
                 label="Status"
                 required
@@ -86,6 +121,52 @@ export function ProjectForm({ mode = 'create' }) {
               >
                 {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </Select>
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Area & Dimensions</h3>
+            <div className="space-y-4">
+              <Input
+                label="Total Area (sq ft)"
+                type="number"
+                placeholder="e.g. 1500"
+                {...register('total_area', { min: { value: 0, message: 'Must be positive' } })}
+                error={errors.total_area?.message}
+              />
+              <Input
+                label="Number of Floors"
+                type="number"
+                placeholder="e.g. 2"
+                {...register('number_of_floors', {
+                  min: { value: 0, message: 'Must be 0 or more' },
+                  max: { value: 50, message: 'Max 50 floors supported' }
+                })}
+                error={errors.number_of_floors?.message}
+              />
+
+              {fields.length > 0 && (
+                <div className="pt-2 space-y-3">
+                  <label className="text-sm font-medium text-gray-700 block">Floor-wise Area (sq ft)</label>
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-3">
+                      <div className="w-1/3">
+                        <Input
+                          placeholder="Floor Name"
+                          {...register(`floor_areas.${index}.floor_name`)}
+                        />
+                      </div>
+                      <div className="w-2/3">
+                        <Input
+                          type="number"
+                          placeholder="Area in sq ft"
+                          {...register(`floor_areas.${index}.area`)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </Card>
 

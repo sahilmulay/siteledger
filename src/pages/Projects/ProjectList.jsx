@@ -22,7 +22,7 @@ export function ProjectList() {
   const [projects, setProjects] = useState([])
   const [stats, setStats] = useState({})
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('Active')
   const [statsLoading, setStatsLoading] = useState(false)
   const [downloadingSummary, setDownloadingSummary] = useState(false)
 
@@ -107,7 +107,7 @@ export function ProjectList() {
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {['All', ...PROJECT_STATUSES].map(s => (
+            {PROJECT_STATUSES.map(s => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}

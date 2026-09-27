@@ -28,7 +28,8 @@ export function AddIncome() {
         payment_mode: data.payment_mode,
         transaction_reference: data.transaction_reference || null,
         date: data.date,
-        remarks: data.remarks || null
+        remarks: data.remarks || null,
+        location: data.location || null
       })
       toast.success('Income added successfully!')
       navigate(`/projects/${projectId}`)
@@ -89,6 +90,12 @@ export function AddIncome() {
                 placeholder="Notes about this payment (optional)"
                 rows={2}
                 {...register('remarks')}
+              />
+
+              <Input
+                label="Location"
+                placeholder="Enter location (optional)"
+                {...register('location')}
               />
             </div>
           </Card>

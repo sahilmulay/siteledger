@@ -91,7 +91,7 @@ export function SitePlans() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header title="Site Plans" backTo={`/projects/${projectId}`} />
+        <Header title="Site Details" backTo={`/projects/${projectId}`} />
         <PageWrapper>
           <div className="space-y-3">
             {[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}
@@ -104,7 +104,7 @@ export function SitePlans() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
-        title="Site Plans"
+        title="Site Details"
         subtitle={project?.project_name ? `${project.project_name} (${project.project_code})` : 'Project Plans'}
         backTo={`/projects/${projectId}`}
       />
@@ -126,7 +126,7 @@ export function SitePlans() {
           >
             <UploadCloud className="h-7 w-7 text-blue-500" />
             <span className="text-sm font-semibold text-gray-700">
-              {uploading ? 'Uploading plan...' : 'Upload Site Plan'}
+              {uploading ? 'Uploading plan...' : 'Upload Site Detail'}
             </span>
             <span className="text-xs text-gray-400">Supports PDF, DWG, DXF, PNG, JPG</span>
           </button>
