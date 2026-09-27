@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Upload, X, Image, Users, BookUser, Search } from 'lucide-react'
+import { Upload, X, Image, Users, BookUser, Search, Plus, UserPlus, Check } from 'lucide-react'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -19,7 +19,7 @@ export function AddExpense({ mode = 'create' }) {
   const { id: projectId, expenseId } = useParams()
   const navigate = useNavigate()
   const { addExpense, updateExpense, fetchExpense, uploadBillImage } = useExpenses()
-  const { user, categories: userCategories, vendors = [], updateCategories } = useAuth()
+  const { user, categories: userCategories, vendors = [], updateCategories, updateVendors } = useAuth()
 
   const categories = (userCategories && Object.keys(userCategories).length > 0)
     ? userCategories
@@ -59,13 +59,63 @@ export function AddExpense({ mode = 'create' }) {
   const watchCategory = watch('category')
   const watchSubCategory = watch('sub_category')
   const watchVendorName = watch('vendor_name') || ''
+  const trimmedVendorName = watchVendorName.trim()
+
+  const isVendorSaved = useMemo(() => {
+    if (!trimmedVendorName || !vendors || vendors.length === 0) return false
+    return vendors.some(v => v.name && v.name.toLowerCase().trim() === trimmedVendorName.toLowerCase())
+  }, [trimmedVendorName, vendors])
+
+  const saveVendorToDirectory = async (nameToSave, mobileToSave, showToast = true) => {
+    const cleanName = (nameToSave || '').trim()
+    if (!cleanName) return false
+    const cleanMobile = (mobileToSave || '').replace(/\D/g, '').slice(-10)
+
+    const currentVendors = vendors || []
+    const existingIndex = currentVendors.findIndex(v => 
+      v.name && v.name.toLowerCase().trim() === cleanName.toLowerCase()
+    )
+
+    let updated
+    if (existingIndex >= 0) {
+      const existing = currentVendors[existingIndex]
+      if (!existing.mobile && cleanMobile) {
+        updated = [...currentVendors]
+        updated[existingIndex] = { ...existing, mobile: cleanMobile }
+      } else {
+        if (showToast) toast.success(`"${cleanName}" is already in Vendor Directory`)
+        return true
+      }
+    } else {
+      const newVendor = {
+        id: Date.now().toString(),
+        name: cleanName,
+        mobile: cleanMobile || ''
+      }
+      updated = [...currentVendors, newVendor]
+    }
+
+    try {
+      if (updateVendors) {
+        await updateVendors(updated)
+        if (showToast) {
+          toast.success(`"${cleanName}" saved to Vendor Directory!`)
+        }
+      }
+      return true
+    } catch (err) {
+      console.error('Failed to save vendor to directory:', err)
+      if (showToast) toast.error('Failed to save to Vendor Directory')
+      return false
+    }
+  }
 
   // Filter suggestions as user types in Vendor Name field
   const matchingSuggestions = useMemo(() => {
-    if (!watchVendorName.trim() || !vendors || vendors.length === 0) return []
-    const q = watchVendorName.trim().toLowerCase()
+    if (!trimmedVendorName || !vendors || vendors.length === 0) return []
+    const q = trimmedVendorName.toLowerCase()
     return vendors.filter(v => v.name && v.name.toLowerCase().includes(q))
-  }, [watchVendorName, vendors])
+  }, [trimmedVendorName, vendors])
 
   // Filter vendors in Search Modal
   const filteredModalVendors = useMemo(() => {
@@ -120,16 +170,24 @@ export function AddExpense({ mode = 'create' }) {
           setPhoneChoiceData({
             name,
             numbers: validNumbers,
-            onSelect: (chosenClean) => {
+            onSelect: async (chosenClean) => {
               setValue('vendor_mobile', chosenClean, { shouldValidate: true })
-              toast.success(`Selected ${chosenClean} for ${name}`)
+              await saveVendorToDirectory(name, chosenClean, false)
+              toast.success(`Imported & saved "${name}" to Vendor Directory!`)
             }
           })
         } else if (validNumbers.length === 1) {
-          setValue('vendor_mobile', validNumbers[0].clean, { shouldValidate: true })
-          toast.success(`Imported ${name || 'contact'}!`)
+          const mobile = validNumbers[0].clean
+          setValue('vendor_mobile', mobile, { shouldValidate: true })
+          await saveVendorToDirectory(name, mobile, false)
+          toast.success(`Imported & saved "${name || 'contact'}" to Vendor Directory!`)
         } else {
-          toast.success(`Imported ${name || 'contact'} (No 10-digit mobile found)`)
+          if (name) {
+            await saveVendorToDirectory(name, '', false)
+            toast.success(`Imported & saved "${name}" to Vendor Directory!`)
+          } else {
+            toast.success('Contact imported!')
+          }
         }
       }
     } catch (err) {
@@ -221,6 +279,15 @@ export function AddExpense({ mode = 'create' }) {
           await updateCategories(updatedCats)
         } catch (err) {
           console.error("Failed to update global categories:", err)
+        }
+      }
+
+      // Auto-save vendor to Vendor Directory if not already saved
+      if (data.vendor_name && data.vendor_name.trim()) {
+        try {
+          await saveVendorToDirectory(data.vendor_name, data.vendor_mobile, false)
+        } catch (err) {
+          console.error("Failed to auto-save vendor to directory:", err)
         }
       }
 
@@ -356,10 +423,10 @@ export function AddExpense({ mode = 'create' }) {
                 />
 
                 {/* Dropdown Suggestions */}
-                {showSuggestions && matchingSuggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-56 overflow-y-auto">
+                {showSuggestions && (matchingSuggestions.length > 0 || (trimmedVendorName && !isVendorSaved)) && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-60 overflow-y-auto">
                     <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-semibold text-gray-500">
-                      <span>Matching Saved Vendors</span>
+                      <span>{matchingSuggestions.length > 0 ? 'Matching Saved Vendors' : 'Vendor Directory'}</span>
                       <button
                         type="button"
                         onClick={() => setShowSuggestions(false)}
@@ -368,6 +435,7 @@ export function AddExpense({ mode = 'create' }) {
                         <X className="h-3 w-3" />
                       </button>
                     </div>
+
                     {matchingSuggestions.map(v => (
                       <button
                         key={v.id}
@@ -375,17 +443,72 @@ export function AddExpense({ mode = 'create' }) {
                         onClick={() => selectVendor(v)}
                         className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 active:bg-blue-100 transition-colors border-b last:border-0 border-gray-50 flex items-center justify-between group"
                       >
-                        <span className="text-sm font-semibold text-gray-900 truncate">
-                          {v.name}
-                        </span>
+                        <div className="min-w-0 pr-2">
+                          <span className="text-sm font-semibold text-gray-900 block truncate">
+                            {v.name}
+                          </span>
+                          {v.mobile && (
+                            <span className="text-[11px] text-gray-500 block truncate">
+                              {v.mobile}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 group-hover:bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
                           Select
                         </span>
                       </button>
                     ))}
+
+                    {trimmedVendorName && !isVendorSaved && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          saveVendorToDirectory(trimmedVendorName, watch('vendor_mobile'), true)
+                          setShowSuggestions(false)
+                        }}
+                        className="w-full text-left px-3.5 py-2.5 bg-blue-50/90 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center justify-between border-t border-blue-100 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5 truncate pr-2">
+                          <UserPlus className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <span>Add <strong>"{trimmedVendorName}"</strong> as New Vendor</span>
+                        </span>
+                        <span className="text-[11px] bg-blue-600 text-white font-semibold px-2.5 py-1 rounded-lg flex-shrink-0 shadow-sm">
+                          + Add
+                        </span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
+
+              {/* Indicator & quick add option below Vendor Name */}
+              {trimmedVendorName && (
+                <div className="-mt-2 mb-1">
+                  {!isVendorSaved ? (
+                    <div className="flex items-center justify-between gap-2 p-2 px-3 bg-blue-50/90 border border-blue-200/90 rounded-xl text-xs text-blue-900 shadow-sm">
+                      <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                        <UserPlus className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                        <span className="truncate">
+                          <strong>"{trimmedVendorName}"</strong> not in directory
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => saveVendorToDirectory(trimmedVendorName, watch('vendor_mobile'), true)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg shadow-sm transition-all flex-shrink-0"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>Add as Vendor</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-700 px-1">
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Saved in Vendor Directory</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Input
                 label="Vendor Mobile (Optional - for WhatsApp receipt)"
@@ -510,7 +633,24 @@ export function AddExpense({ mode = 'create' }) {
 
             <div className="max-h-60 overflow-y-auto space-y-1">
               {filteredModalVendors.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-6">No matching vendors found</p>
+                <div className="py-6 text-center">
+                  <p className="text-xs text-gray-400 mb-3">No matching vendors found</p>
+                  {vendorSearchQuery.trim() && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const name = vendorSearchQuery.trim()
+                        setValue('vendor_name', name, { shouldValidate: true })
+                        await saveVendorToDirectory(name, '')
+                        setVendorSearchModal(false)
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add "{vendorSearchQuery.trim()}" as New Vendor</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 filteredModalVendors.map(v => (
                   <button
@@ -522,7 +662,12 @@ export function AddExpense({ mode = 'create' }) {
                     }}
                     className="w-full text-left p-2.5 rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-colors flex items-center justify-between border border-transparent hover:border-blue-100 group"
                   >
-                    <span className="text-sm font-semibold text-gray-800 truncate">{v.name}</span>
+                    <div className="min-w-0 pr-2">
+                      <span className="text-sm font-semibold text-gray-800 block truncate">{v.name}</span>
+                      {v.mobile && (
+                        <span className="text-xs text-gray-500 block truncate">{v.mobile}</span>
+                      )}
+                    </div>
                     <span className="text-xs font-semibold text-blue-600 bg-blue-50 group-hover:bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
                       Select
                     </span>
