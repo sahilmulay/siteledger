@@ -36,6 +36,7 @@ export function AddExpense({ mode = 'create' }) {
   const [vendorSearchModal, setVendorSearchModal] = useState(false)
   const [vendorSearchQuery, setVendorSearchQuery] = useState('')
   const [phoneChoiceData, setPhoneChoiceData] = useState(null)
+  const [newVendorModal, setNewVendorModal] = useState(null)
   const suggestionRef = useRef(null)
 
   const {
@@ -79,7 +80,7 @@ export function AddExpense({ mode = 'create' }) {
     let updated
     if (existingIndex >= 0) {
       const existing = currentVendors[existingIndex]
-      if (!existing.mobile && cleanMobile) {
+      if (cleanMobile && existing.mobile !== cleanMobile) {
         updated = [...currentVendors]
         updated[existingIndex] = { ...existing, mobile: cleanMobile }
       } else {
@@ -463,8 +464,11 @@ export function AddExpense({ mode = 'create' }) {
                       <button
                         type="button"
                         onClick={() => {
-                          saveVendorToDirectory(trimmedVendorName, watch('vendor_mobile'), true)
                           setShowSuggestions(false)
+                          setNewVendorModal({
+                            name: trimmedVendorName,
+                            mobile: watch('vendor_mobile') || ''
+                          })
                         }}
                         className="w-full text-left px-3.5 py-2.5 bg-blue-50/90 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center justify-between border-t border-blue-100 transition-colors"
                       >
@@ -494,7 +498,13 @@ export function AddExpense({ mode = 'create' }) {
                       </div>
                       <button
                         type="button"
-                        onClick={() => saveVendorToDirectory(trimmedVendorName, watch('vendor_mobile'), true)}
+                        onClick={() => {
+                          setShowSuggestions(false)
+                          setNewVendorModal({
+                            name: trimmedVendorName,
+                            mobile: watch('vendor_mobile') || ''
+                          })
+                        }}
                         className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg shadow-sm transition-all flex-shrink-0"
                       >
                         <Plus className="h-3 w-3" />
@@ -638,11 +648,13 @@ export function AddExpense({ mode = 'create' }) {
                   {vendorSearchQuery.trim() && (
                     <button
                       type="button"
-                      onClick={async () => {
+                      onClick={() => {
                         const name = vendorSearchQuery.trim()
-                        setValue('vendor_name', name, { shouldValidate: true })
-                        await saveVendorToDirectory(name, '')
                         setVendorSearchModal(false)
+                        setNewVendorModal({
+                          name,
+                          mobile: watch('vendor_mobile') || ''
+                        })
                       }}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all"
                     >
@@ -684,6 +696,144 @@ export function AddExpense({ mode = 'create' }) {
         data={phoneChoiceData}
         onClose={() => setPhoneChoiceData(null)}
       />
+
+      {/* Modal to prompt for Vendor Name & Phone Number */}
+      {newVendorModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl animate-scale-up">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-blue-600" />
+                Add Vendor to Directory
+              </h4>
+              <button
+                type="button"
+                onClick={() => setNewVendorModal(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4">
+              Enter details for <strong>{newVendorModal.name || 'Vendor'}</strong> to save them in your directory.
+            </p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const name = newVendorModal.name.trim()
+                if (!name) {
+                  toast.error('Vendor name is required')
+                  return
+                }
+
+                const rawMobile = (newVendorModal.mobile || '').trim()
+                const cleanMobile = rawMobile.replace(/\D/g, '')
+                if (rawMobile && cleanMobile.length !== 10 && !(cleanMobile.length === 12 && cleanMobile.startsWith('91'))) {
+                  toast.error('Please enter a valid 10-digit mobile number')
+                  return
+                }
+
+                const finalMobile = cleanMobile ? cleanMobile.slice(-10) : ''
+                const saved = await saveVendorToDirectory(name, finalMobile, true)
+                if (saved) {
+                  setValue('vendor_name', name, { shouldValidate: true })
+                  if (finalMobile) {
+                    setValue('vendor_mobile', finalMobile, { shouldValidate: true })
+                  }
+                  setNewVendorModal(null)
+                }
+              }}
+              className="space-y-3.5"
+            >
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
+                  Vendor / Worker Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Chavan Store, Ramesh"
+                  value={newVendorModal.name}
+                  onChange={e => setNewVendorModal(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-semibold text-gray-700 block">
+                    Mobile Number (10 digits)
+                  </label>
+                  {'contacts' in navigator && 'ContactsManager' in window && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false })
+                          if (contacts && contacts.length > 0) {
+                            const { name: cName, validNumbers } = parseContactNumbers(contacts[0])
+                            if (validNumbers.length > 0) {
+                              setNewVendorModal(prev => ({
+                                ...prev,
+                                name: prev.name || cName,
+                                mobile: validNumbers[0].clean
+                              }))
+                              toast.success('Fetched number from contacts!')
+                            } else if (cName) {
+                              setNewVendorModal(prev => ({ ...prev, name: prev.name || cName }))
+                            }
+                          }
+                        } catch (err) {
+                          if (err.name !== 'AbortError') {
+                            toast.error('Could not access contacts')
+                          }
+                        }
+                      }}
+                      className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    >
+                      <BookUser className="h-3 w-3" />
+                      <span>Pick from Contacts</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="tel"
+                  autoFocus
+                  placeholder="e.g. 9876543210"
+                  value={newVendorModal.mobile}
+                  onChange={e => setNewVendorModal(prev => ({ ...prev, mobile: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Used to send payment voucher/receipt directly on WhatsApp
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => setNewVendorModal(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  fullWidth
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                >
+                  Save Vendor
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
