@@ -111,6 +111,35 @@ export function SitePlans() {
 
       <PageWrapper>
         <div className="space-y-4 pb-20">
+          
+          {/* Area Overview Card */}
+          {project && (project.total_area || (project.floor_areas && project.floor_areas.length > 0)) && (
+            <Card padding="p-4" className="bg-indigo-50/50 border-indigo-100">
+              <div className="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
+                <h3 className="font-bold text-indigo-900 text-sm">Site Area Overview</h3>
+                {project.total_area && (
+                  <span className="text-xs font-bold bg-indigo-600 text-white px-2 py-1 rounded-full shadow-sm">
+                    Total: {project.total_area} sq ft
+                  </span>
+                )}
+              </div>
+              
+              {project.floor_areas && project.floor_areas.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-indigo-800/70 uppercase tracking-wide">Floor Details</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {project.floor_areas.map((f, i) => (
+                      <div key={i} className="bg-white rounded-lg p-2.5 shadow-sm border border-indigo-50 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-700 truncate mr-2">{f.floor_name || `Floor ${i+1}`}</span>
+                        <span className="text-xs font-bold text-indigo-700 whitespace-nowrap">{f.area} sq ft</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
           {/* Upload card */}
           <input
             ref={fileRef}
