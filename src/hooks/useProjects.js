@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { getCached, setCached, invalidateCache } from '../lib/cache'
+import { getCached, setCached, invalidateCache, invalidateProjectCache } from '../lib/cache'
 
 export function useProjects() {
   const { user } = useAuth()
@@ -115,10 +115,12 @@ export function useProjects() {
     }
   }, [user])
 
-  const fetchProjectStats = useCallback(async (projectId) => {
+  const fetchProjectStats = useCallback(async (projectId, force = false) => {
     const cacheKey = `stats:${projectId}`
-    const cached = getCached(cacheKey)
-    if (cached) return cached
+    if (!force) {
+      const cached = getCached(cacheKey)
+      if (cached) return cached
+    }
     try {
       const [incomeRes, expenseRes] = await Promise.all([
         supabase.from('income').select('amount, date').eq('project_id', projectId),

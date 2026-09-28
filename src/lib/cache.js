@@ -27,6 +27,18 @@ export function invalidateCache(prefix) {
   })
 }
 
+export function invalidateProjectCache(projectId) {
+  if (projectId) {
+    invalidateCache(`stats:${projectId}`)
+    invalidateCache(`project:${projectId}`)
+  } else {
+    invalidateCache('stats')
+    invalidateCache('project')
+  }
+  invalidateCache('projects')
+}
+
 export function clearCache() {
   Object.keys(cache).forEach(k => delete cache[k])
 }
+

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   Plus, Filter, Trash2, Receipt, ExternalLink, Search,
-  Download, FileText, Phone, X, RefreshCw, Edit
+  Download, Phone, X, RefreshCw, Edit
 } from 'lucide-react'
 import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon'
+import { PdfIcon } from '../../components/ui/PdfIcon'
+
 import { useExpenses } from '../../hooks/useExpenses'
 import { useProjects } from '../../hooks/useProjects'
 import { useAuth } from '../../contexts/AuthContext'
@@ -29,6 +31,7 @@ const CATEGORY_BADGE_COLORS = {
 export function ExpenseList() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { firmName, categories: userCategories } = useAuth()
   const { fetchExpenses, deleteExpense, loading } = useExpenses()
   const { fetchProject } = useProjects()
@@ -62,7 +65,8 @@ export function ExpenseList() {
   useEffect(() => {
     fetchProject(projectId).then(setProject)
     loadExpenses(0)
-  }, [projectId])
+  }, [projectId, location.key])
+
 
   const applyFilters = (f) => {
     setFilters(f)
@@ -234,9 +238,10 @@ Thank you!`
             >
               <Filter className="h-4 w-4" />
             </button>
-            <Button size="sm" onClick={() => navigate(`/projects/${projectId}/expenses/new`)}>
+            <Button size="sm" onClick={() => navigate(`/projects/${projectId}/expenses/new`, { state: { from: 'expenses' } })}>
               <Plus className="h-4 w-4" />
             </Button>
+
           </div>
         }
       />
@@ -345,9 +350,10 @@ Thank you!`
                   Clear Filters
                 </Button>
               ) : (
-                <Button variant="danger" onClick={() => navigate(`/projects/${projectId}/expenses/new`)}>
+                <Button variant="danger" onClick={() => navigate(`/projects/${projectId}/expenses/new`, { state: { from: 'expenses' } })}>
                   <Plus className="h-4 w-4" /> Add Expense
                 </Button>
+
               )
             }
           />
@@ -407,9 +413,10 @@ Thank you!`
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
                             )}
-                            <button onClick={() => handleDownloadVoucher(item)} title="Download PDF" className="p-1 text-gray-500 hover:bg-gray-100 rounded">
-                              <FileText className="h-3.5 w-3.5" />
+                            <button onClick={() => handleDownloadVoucher(item)} title="Download PDF" className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex items-center justify-center">
+                              <PdfIcon className="h-4 w-4" />
                             </button>
+
                             <button onClick={() => sendWhatsAppReceipt(item)} title="Share on WhatsApp" className="p-1 hover:bg-emerald-50 rounded transition-transform active:scale-95 flex items-center justify-center">
                               <WhatsAppIcon className="h-4 w-4" />
                             </button>

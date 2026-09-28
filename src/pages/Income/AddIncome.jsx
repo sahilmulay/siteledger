@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { useIncome } from '../../hooks/useIncome'
@@ -9,10 +9,12 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PAYMENT_MODES } from '../../lib/constants'
 import { todayInputDate } from '../../lib/formatters'
+import { invalidateProjectCache } from '../../lib/cache'
 
 export function AddIncome() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { addIncome } = useIncome()
 
   const {
@@ -31,8 +33,14 @@ export function AddIncome() {
         remarks: data.remarks || null,
         location: data.location || null
       })
+      invalidateProjectCache(projectId)
       toast.success('Income added successfully!')
-      navigate(`/projects/${projectId}`)
+      const from = location.state?.from
+      if (from === 'income') {
+        navigate(`/projects/${projectId}/income`, { replace: true })
+      } else {
+        navigate(`/projects/${projectId}`, { replace: true })
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to add income')
     }
@@ -40,7 +48,12 @@ export function AddIncome() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Add Income" subtitle="Money Received" backTo={`/projects/${projectId}`} />
+      <Header
+        title="Add Income"
+        subtitle="Money Received"
+        backTo={location.state?.from === 'income' ? `/projects/${projectId}/income` : `/projects/${projectId}`}
+      />
+
       <PageWrapper>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Card>

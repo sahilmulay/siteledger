@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Upload, X, Image, Users, BookUser, Search, Plus, UserPlus, Check, ChevronDown } from 'lucide-react'
@@ -14,10 +14,13 @@ import { PhoneChoiceModal } from '../../components/ui/PhoneChoiceModal'
 import { EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../lib/constants'
 import { todayInputDate } from '../../lib/formatters'
 import { parseContactNumbers } from '../../lib/contactHelper'
+import { invalidateProjectCache } from '../../lib/cache'
 
 export function AddExpense({ mode = 'create' }) {
   const { id: projectId, expenseId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+
   const { addExpense, updateExpense, fetchExpense, uploadBillImage } = useExpenses()
   const { user, categories: userCategories, vendors = [], updateCategories, updateVendors } = useAuth()
 
@@ -400,8 +403,14 @@ export function AddExpense({ mode = 'create' }) {
         }
       }
 
+      invalidateProjectCache(projectId)
       toast.success(mode === 'edit' ? 'Expense updated successfully!' : 'Expense added successfully!')
-      navigate(`/projects/${projectId}`)
+      const from = location.state?.from
+      if (mode === 'edit' || from === 'expenses') {
+        navigate(`/projects/${projectId}/expenses`, { replace: true })
+      } else {
+        navigate(`/projects/${projectId}`, { replace: true })
+      }
     } catch (err) {
       setUploading(false)
       toast.error(err.message || `Failed to ${mode === 'edit' ? 'update' : 'add'} expense`)
@@ -410,7 +419,11 @@ export function AddExpense({ mode = 'create' }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title={mode === 'edit' ? 'Edit Expense' : 'Add Expense'} subtitle={mode === 'edit' ? 'Update expense details' : 'Record a new expense'} backTo={`/projects/${projectId}/expenses`} />
+      <Header
+        title={mode === 'edit' ? 'Edit Expense' : 'Add Expense'}
+        subtitle={mode === 'edit' ? 'Update expense details' : 'Record a new expense'}
+        backTo={location.state?.from === 'dashboard' ? `/projects/${projectId}` : `/projects/${projectId}/expenses`}
+      />
       <PageWrapper>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Card>

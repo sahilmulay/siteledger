@@ -624,18 +624,18 @@ export function Settings() {
         </Card>
 
         {/* Manage Categories & Sub-Categories */}
-        <Card className="mb-4">
+        <Card className="mb-4 overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-blue-700" />
-              <div>
-                <h3 className="font-semibold text-gray-900 text-sm">Expense Categories & Sub-Categories</h3>
-                <p className="text-xs text-gray-500">Add, edit, or customize your categories</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <Tag className="h-5 w-5 text-blue-700 flex-shrink-0" />
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm truncate">Expense Categories</h3>
+                <p className="text-xs text-gray-500 truncate">Add, edit, or customize categories</p>
               </div>
             </div>
             <button
               onClick={handleResetCategories}
-              className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg flex items-center gap-1 font-medium transition-colors"
+              className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg flex items-center gap-1 font-medium transition-colors flex-shrink-0"
               title="Reset to standard categories"
             >
               <RotateCcw className="h-3 w-3" /> Reset
@@ -646,15 +646,16 @@ export function Settings() {
           <form onSubmit={handleAddCategory} className="flex gap-2 mb-4">
             <input
               type="text"
-              placeholder="New Category Name (e.g. Electrical, Plumbing)"
+              placeholder="New Category (e.g. Electrical, Plumbing)"
               value={newCatName}
               onChange={e => setNewCatName(e.target.value)}
-              className="flex-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 min-w-0 px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            <Button type="submit" size="sm" className="gap-1 flex-shrink-0">
+            <Button type="submit" size="sm" className="gap-1 flex-shrink-0 whitespace-nowrap">
               <Plus className="h-4 w-4" /> Add Category
             </Button>
           </form>
+
 
           {/* Categories List */}
           <div className="space-y-2.5">
@@ -717,7 +718,7 @@ export function Settings() {
                             placeholder={`New sub-category for ${catName}`}
                             value={newSubName}
                             onChange={e => setNewSubName(e.target.value)}
-                            className="flex-1 px-2.5 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                             autoFocus
                             onKeyDown={e => {
                               if (e.key === 'Enter') {
@@ -726,9 +727,10 @@ export function Settings() {
                               }
                             }}
                           />
-                          <Button size="sm" onClick={() => handleAddSubCategory(catName)} className="text-xs py-1 px-2.5">
+                          <Button size="sm" onClick={() => handleAddSubCategory(catName)} className="text-xs py-1 px-2.5 flex-shrink-0">
                             Add
                           </Button>
+
                           <button
                             type="button"
                             onClick={() => { setActiveSubInput(null); setNewSubName('') }}

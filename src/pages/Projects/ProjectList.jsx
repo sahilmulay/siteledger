@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Plus, Search, FolderOpen, Filter, Download } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { useAuth } from '../../contexts/AuthContext'
@@ -18,7 +18,9 @@ import { supabase } from '../../lib/supabase'
 
 export function ProjectList() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { firmName } = useAuth()
+
   const { fetchProjects, fetchProjectStats, loading } = useProjects()
   const [projects, setProjects] = useState([])
   const [stats, setStats] = useState({})
@@ -69,7 +71,7 @@ export function ProjectList() {
     }
   }, [fetchProjects])
 
-  useEffect(() => { loadProjects() }, [loadProjects])
+  useEffect(() => { loadProjects() }, [loadProjects, location.key])
 
   const filtered = projects.filter(p => {
     const q = search.toLowerCase()

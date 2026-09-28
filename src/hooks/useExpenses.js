@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { invalidateCache } from '../lib/cache'
+import { invalidateProjectCache } from '../lib/cache'
 
 export function useExpenses() {
   const [loading, setLoading] = useState(false)
@@ -59,11 +59,12 @@ export function useExpenses() {
             .select()
             .single()
           if (retry.error) throw retry.error
+          invalidateProjectCache(projectId)
           return retry.data
         }
         throw error
       }
-      invalidateCache(`stats:${projectId}`)
+      invalidateProjectCache(projectId)
       return data
     } catch (err) {
       setError(err.message)
@@ -103,7 +104,7 @@ export function useExpenses() {
         .select()
         .single()
       if (error) throw error
-      if (data?.project_id) invalidateCache(`stats:${data.project_id}`)
+      invalidateProjectCache(data?.project_id)
       return data
     } catch (err) {
       setError(err.message)
@@ -119,7 +120,7 @@ export function useExpenses() {
     try {
       const { error } = await supabase.from('expenses').delete().eq('id', id)
       if (error) throw error
-      if (projectId) invalidateCache(`stats:${projectId}`)
+      invalidateProjectCache(projectId)
     } catch (err) {
       setError(err.message)
       throw err

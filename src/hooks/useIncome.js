@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { invalidateProjectCache } from '../lib/cache'
 
 export function useIncome() {
   const [loading, setLoading] = useState(false)
@@ -44,6 +45,7 @@ export function useIncome() {
         .select()
         .single()
       if (error) throw error
+      invalidateProjectCache(projectId)
       return data
     } catch (err) {
       setError(err.message)
@@ -53,7 +55,7 @@ export function useIncome() {
     }
   }, [])
 
-  const updateIncome = useCallback(async (id, updates) => {
+  const updateIncome = useCallback(async (id, updates, projectId) => {
     setLoading(true)
     setError(null)
     try {
@@ -64,6 +66,7 @@ export function useIncome() {
         .select()
         .single()
       if (error) throw error
+      invalidateProjectCache(projectId || data?.project_id)
       return data
     } catch (err) {
       setError(err.message)
@@ -73,12 +76,13 @@ export function useIncome() {
     }
   }, [])
 
-  const deleteIncome = useCallback(async (id) => {
+  const deleteIncome = useCallback(async (id, projectId) => {
     setLoading(true)
     setError(null)
     try {
       const { error } = await supabase.from('income').delete().eq('id', id)
       if (error) throw error
+      invalidateProjectCache(projectId)
     } catch (err) {
       setError(err.message)
       throw err

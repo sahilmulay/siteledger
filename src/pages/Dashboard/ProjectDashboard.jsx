@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, Wallet, ReceiptText,
   Plus, Edit2, FileText, Image, File as FileIcon, PieChart
@@ -38,6 +38,7 @@ function StatCard({ label, value, icon: Icon, color, sub, onClick }) {
 export function ProjectDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { fetchProject, fetchProjectStats } = useProjects()
   const [project, setProject] = useState(null)
   const [stats, setStats] = useState(null)
@@ -45,12 +46,12 @@ export function ProjectDashboard() {
   const [planCount, setPlanCount] = useState(0)
   const [photoCount, setPhotoCount] = useState(0)
 
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async (force = false) => {
     setLoading(true)
     try {
       const [proj, s] = await Promise.all([
         fetchProject(id),
-        fetchProjectStats(id)
+        fetchProjectStats(id, force)
       ])
       setProject(proj)
       setStats(s)
@@ -65,7 +66,10 @@ export function ProjectDashboard() {
     }
   }, [id, fetchProject, fetchProjectStats])
 
-  useEffect(() => { loadAll() }, [loadAll])
+  useEffect(() => { 
+    loadAll(true) 
+  }, [loadAll, location.key])
+
 
   if (loading) {
     return (
@@ -222,19 +226,20 @@ export function ProjectDashboard() {
       <div className="fixed bottom-16 left-0 right-0 z-30 px-4 pb-2">
         <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto">
           <button
-            onClick={() => navigate(`/projects/${id}/income/new`)}
+            onClick={() => navigate(`/projects/${id}/income/new`, { state: { from: 'dashboard' } })}
             className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-semibold rounded-2xl py-3.5 shadow-lg transition-all"
           >
             <Plus className="h-4 w-4" />
             Add Income
           </button>
           <button
-            onClick={() => navigate(`/projects/${id}/expenses/new`)}
+            onClick={() => navigate(`/projects/${id}/expenses/new`, { state: { from: 'dashboard' } })}
             className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 active:scale-95 text-white font-semibold rounded-2xl py-3.5 shadow-lg transition-all"
           >
             <Plus className="h-4 w-4" />
             Add Expense
           </button>
+
         </div>
       </div>
     </div>

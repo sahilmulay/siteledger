@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Plus, Filter, Trash2, IndianRupee, Search } from 'lucide-react'
 import { useIncome } from '../../hooks/useIncome'
 import { useProjects } from '../../hooks/useProjects'
@@ -18,6 +18,7 @@ import toast from 'react-hot-toast'
 export function IncomeList() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { fetchIncome, deleteIncome, loading } = useIncome()
   const { fetchProject } = useProjects()
 
@@ -41,7 +42,7 @@ export function IncomeList() {
   useEffect(() => {
     fetchProject(projectId).then(setProject)
     loadIncome(0)
-  }, [projectId])
+  }, [projectId, location.key])
 
   const applyFilters = (f) => {
     setFilters(f)
@@ -54,9 +55,10 @@ export function IncomeList() {
     if (!deleteTarget) return
     setDeleteLoading(true)
     try {
-      await deleteIncome(deleteTarget)
+      await deleteIncome(deleteTarget, projectId)
       setIncome(prev => prev.filter(i => i.id !== deleteTarget))
       toast.success('Income deleted successfully!')
+
     } catch (err) {
       toast.error('Failed to delete income entry')
     } finally {
@@ -88,7 +90,7 @@ export function IncomeList() {
             <button onClick={() => setShowFilters(!showFilters)} className="p-2 rounded-xl hover:bg-gray-100">
               <Filter className="h-4 w-4 text-gray-600" />
             </button>
-            <Button size="sm" onClick={() => navigate(`/projects/${projectId}/income/new`)}>
+            <Button size="sm" onClick={() => navigate(`/projects/${projectId}/income/new`, { state: { from: 'income' } })}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -137,12 +139,13 @@ export function IncomeList() {
                   Clear Search
                 </Button>
               ) : (
-                <Button onClick={() => navigate(`/projects/${projectId}/income/new`)}>
+                <Button onClick={() => navigate(`/projects/${projectId}/income/new`, { state: { from: 'income' } })}>
                   <Plus className="h-4 w-4" /> Add Income
                 </Button>
               )
             }
           />
+
         ) : (
           <div className="space-y-3">
             {filteredIncome.map(item => (
