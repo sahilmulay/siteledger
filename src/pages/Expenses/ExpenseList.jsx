@@ -307,7 +307,7 @@ Thank you!`
 
         {/* Filter Drawer Card */}
         {showFilters && (
-          <Card className="mb-4">
+          <Card className="mb-4 overflow-visible">
             <h3 className="font-semibold text-sm mb-3">Filters</h3>
             <ExpenseFilterForm
               categories={allCategories}
@@ -524,6 +524,15 @@ Thank you!`
 
 function ExpenseFilterForm({ categories = [], categoryDict = {}, allSubCategories = [], vendors = [], filters, onApply, onClear }) {
   const [f, setF] = useState(filters)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  const trimmedVendorName = (f.vendorName || '').trim()
+  const matchingSuggestions = useMemo(() => {
+    if (!vendors || vendors.length === 0) return []
+    if (!trimmedVendorName) return vendors
+    const q = trimmedVendorName.toLowerCase()
+    return vendors.filter(v => v.name && v.name.toLowerCase().includes(q))
+  }, [trimmedVendorName, vendors])
 
   // Sub-categories list based on selected category or all sub-categories
   const availableSubCategories = useMemo(() => {
@@ -573,21 +582,39 @@ function ExpenseFilterForm({ categories = [], categoryDict = {}, allSubCategorie
             {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
-        <div>
+        <div className="relative">
           <label className="text-xs font-medium text-gray-600 block mb-1">Vendor Name</label>
           <input
             type="text"
-            list="vendor-list"
             placeholder="Search vendor"
             value={f.vendorName || ''}
-            onChange={e => setF(prev => ({ ...prev, vendorName: e.target.value }))}
+            onChange={e => {
+              setF(prev => ({ ...prev, vendorName: e.target.value }))
+              if (!showSuggestions) setShowSuggestions(true)
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            autoComplete="off"
             className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"
           />
-          <datalist id="vendor-list">
-            {vendors?.map(v => (
-              <option key={v.id || v.name} value={v.name} />
-            ))}
-          </datalist>
+          {showSuggestions && matchingSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-48 overflow-y-auto">
+              {matchingSuggestions.map(v => (
+                <button
+                  key={v.id || v.name}
+                  type="button"
+                  onClick={() => {
+                    setF(prev => ({ ...prev, vendorName: v.name }))
+                    setShowSuggestions(false)
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-blue-50 transition-colors border-b last:border-0 border-gray-50 flex flex-col"
+                >
+                  <span className="text-sm font-medium text-gray-900 block truncate">{v.name}</span>
+                  {v.mobile && <span className="text-[10px] text-gray-500">{v.mobile}</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
