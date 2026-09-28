@@ -22,6 +22,7 @@ export function useExpenses() {
       if (filters.paymentMode) query = query.eq('payment_mode', filters.paymentMode)
       if (filters.startDate) query = query.gte('expense_date', filters.startDate)
       if (filters.endDate) query = query.lte('expense_date', filters.endDate)
+      if (filters.vendorName) query = query.ilike('vendor_name', `%${filters.vendorName}%`)
 
       const from = (filters.page || 0) * (filters.limit || 20)
       query = query.range(from, from + (filters.limit || 20) - 1)

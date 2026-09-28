@@ -32,7 +32,7 @@ export function ExpenseList() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { firmName, categories: userCategories } = useAuth()
+  const { firmName, categories: userCategories, vendors } = useAuth()
   const { fetchExpenses, deleteExpense, loading } = useExpenses()
   const { fetchProject } = useProjects()
 
@@ -41,7 +41,7 @@ export function ExpenseList() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
-  const [filters, setFilters] = useState({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '' })
+  const [filters, setFilters] = useState({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '', vendorName: '' })
   const [showFilters, setShowFilters] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -147,6 +147,7 @@ export function ExpenseList() {
         paymentMode: filters.paymentMode,
         startDate: filters.startDate,
         endDate: filters.endDate,
+        vendorName: filters.vendorName,
         search: search.trim()
       }
       await generateFilteredExpensesPDF({
@@ -217,7 +218,7 @@ Thank you!`
     }
   }
 
-  const hasActiveFilters = filters.category || filters.subCategory || filters.paymentMode || filters.startDate || filters.endDate || search.trim()
+  const hasActiveFilters = filters.category || filters.subCategory || filters.paymentMode || filters.startDate || filters.endDate || filters.vendorName || search.trim()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -230,7 +231,7 @@ Thank you!`
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`p-2 rounded-xl border transition-colors ${
-                (filters.category || filters.subCategory || filters.paymentMode || filters.startDate || filters.endDate)
+                (filters.category || filters.subCategory || filters.paymentMode || filters.startDate || filters.endDate || filters.vendorName)
                   ? 'bg-blue-50 border-blue-200 text-blue-600'
                   : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
@@ -282,6 +283,11 @@ Thank you!`
                 {filters.paymentMode} <X className="h-3 w-3 cursor-pointer" onClick={() => applyFilters({ ...filters, paymentMode: '' })} />
               </span>
             )}
+            {filters.vendorName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                Vendor: {filters.vendorName} <X className="h-3 w-3 cursor-pointer" onClick={() => applyFilters({ ...filters, vendorName: '' })} />
+              </span>
+            )}
             {(filters.startDate || filters.endDate) && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                 {filters.startDate || 'Start'} → {filters.endDate || 'Now'} <X className="h-3 w-3 cursor-pointer" onClick={() => applyFilters({ ...filters, startDate: '', endDate: '' })} />
@@ -290,7 +296,7 @@ Thank you!`
             <button
               onClick={() => {
                 setSearch('')
-                applyFilters({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '' })
+                applyFilters({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '', vendorName: '' })
               }}
               className="text-xs text-red-600 hover:underline ml-1 font-medium"
             >
@@ -307,9 +313,10 @@ Thank you!`
               categories={allCategories}
               categoryDict={categoryDict}
               allSubCategories={allSubCategories}
+              vendors={vendors}
               filters={filters}
               onApply={applyFilters}
-              onClear={() => applyFilters({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '' })}
+              onClear={() => applyFilters({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '', vendorName: '' })}
             />
           </Card>
         )}
@@ -346,7 +353,7 @@ Thank you!`
             description={hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add your first expense entry.'}
             action={
               hasActiveFilters ? (
-                <Button variant="secondary" size="sm" onClick={() => { setSearch(''); applyFilters({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '' }) }}>
+                <Button variant="secondary" size="sm" onClick={() => { setSearch(''); applyFilters({ category: '', subCategory: '', paymentMode: '', startDate: '', endDate: '', vendorName: '' }) }}>
                   Clear Filters
                 </Button>
               ) : (
@@ -515,7 +522,7 @@ Thank you!`
   )
 }
 
-function ExpenseFilterForm({ categories = [], categoryDict = {}, allSubCategories = [], filters, onApply, onClear }) {
+function ExpenseFilterForm({ categories = [], categoryDict = {}, allSubCategories = [], vendors = [], filters, onApply, onClear }) {
   const [f, setF] = useState(filters)
 
   // Sub-categories list based on selected category or all sub-categories
@@ -554,16 +561,34 @@ function ExpenseFilterForm({ categories = [], categoryDict = {}, allSubCategorie
         </select>
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-gray-600 block mb-1">Payment Mode</label>
-        <select
-          value={f.paymentMode}
-          onChange={e => setF(prev => ({ ...prev, paymentMode: e.target.value }))}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"
-        >
-          <option value="">All Modes</option>
-          {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Payment Mode</label>
+          <select
+            value={f.paymentMode}
+            onChange={e => setF(prev => ({ ...prev, paymentMode: e.target.value }))}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"
+          >
+            <option value="">All Modes</option>
+            {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Vendor Name</label>
+          <input
+            type="text"
+            list="vendor-list"
+            placeholder="Search vendor"
+            value={f.vendorName || ''}
+            onChange={e => setF(prev => ({ ...prev, vendorName: e.target.value }))}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"
+          />
+          <datalist id="vendor-list">
+            {vendors?.map(v => (
+              <option key={v.id || v.name} value={v.name} />
+            ))}
+          </datalist>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

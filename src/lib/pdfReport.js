@@ -511,6 +511,7 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
   if (filterSummary.category) filterTags.push(`Category: ${filterSummary.category}`)
   if (filterSummary.subCategory) filterTags.push(`Sub-Cat: ${filterSummary.subCategory}`)
   if (filterSummary.paymentMode) filterTags.push(`Mode: ${filterSummary.paymentMode}`)
+  if (filterSummary.vendorName) filterTags.push(`Vendor: ${filterSummary.vendorName}`)
   if (filterSummary.startDate || filterSummary.endDate) {
     filterTags.push(`Date: ${filterSummary.startDate || 'Start'} to ${filterSummary.endDate || 'Now'}`)
   }
