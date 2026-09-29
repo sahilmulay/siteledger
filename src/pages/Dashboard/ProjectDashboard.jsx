@@ -28,8 +28,8 @@ function StatCard({ label, value, icon: Icon, color, sub, onClick }) {
           <Icon className="h-5 w-5 text-white" />
         </div>
       </div>
-      <p className="text-xl font-bold text-gray-900 leading-tight">{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+      {value && <p className="text-xl font-bold text-gray-900 leading-tight">{value}</p>}
+      {label && <p className="text-xs font-bold text-gray-800 mt-1">{label}</p>}
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
     </button>
   )
@@ -159,11 +159,10 @@ export function ProjectDashboard() {
               onClick={() => navigate(`/projects/${id}/expenses`)}
             />
             <StatCard
-              label="Site Details"
-              value={planCount}
+              value="Site Details"
               icon={FileIcon}
               color="bg-sky-500"
-              sub={planCount === 0 ? 'Tap to view / upload' : `${planCount} plan${planCount !== 1 ? 's' : ''}`}
+              sub={planCount > 0 ? `${planCount} plan${planCount !== 1 ? 's' : ''}` : 'Tap to view / upload'}
               onClick={() => navigate(`/projects/${id}/plans`)}
             />
             <StatCard
@@ -195,7 +194,7 @@ export function ProjectDashboard() {
           {/* Expense Breakdown */}
           {(stats?.totalExpenses || 0) > 0 && (
             <Card className="mb-4">
-              <h3 className="font-semibold text-gray-700 mb-3 text-sm">Expense Breakdown</h3>
+              <h3 className="font-bold text-gray-800 mb-3 text-sm">Expense Breakdown</h3>
               <div className="space-y-3">
                 {Object.entries(stats?.categoryBreakdown || {})
                   .filter(([k]) => k && k !== 'undefined')

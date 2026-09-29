@@ -235,21 +235,29 @@ export async function generateProjectPDF({ project, stats, income, expenses, fir
     autoTable(doc, {
       ...plainTableConfig,
       startY: y,
-      head: [['Date', 'Category', 'Sub-Category', 'Vendor', 'Mode', 'Amount']],
-      body: expenses.map(e => [
-        formatDate(e.expense_date),
-        e.category,
-        e.sub_category || '—',
-        e.vendor_name || '—',
-        e.payment_mode,
-        formatPDFMoney(e.amount)
-      ]),
+      head: [['Date', 'Category', 'Sub-Category', 'Vendor', 'Mode', 'Ref / Note', 'Amount']],
+      body: expenses.map(e => {
+        const parts = []
+        if (e.quantity) parts.push(`Qty: ${e.quantity}`)
+        if (e.remarks) parts.push(e.remarks)
+        if (e.transaction_reference) parts.push(`Ref: ${e.transaction_reference}`)
+        const note = parts.length > 0 ? parts.join(' · ') : '—'
+        return [
+          formatDate(e.expense_date),
+          e.category,
+          e.sub_category || '—',
+          e.vendor_name || '—',
+          e.payment_mode,
+          note,
+          formatPDFMoney(e.amount)
+        ]
+      }),
       margin: { left: margin, right: margin },
       columnStyles: {
-        5: { halign: 'right', fontStyle: 'bold' }
+        6: { halign: 'right', fontStyle: 'bold' }
       },
       foot: [[
-        'Total Expenses', '', '', '', '',
+        'Total Expenses', '', '', '', '', '',
         formatPDFMoney(expenses.reduce((s, e) => s + Number(e.amount), 0))
       ]]
     })
@@ -604,15 +612,22 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
     }
   }
 
-  const tableBody = expenses.map(e => [
-    formatDate(e.expense_date),
-    e.category,
-    e.sub_category || '—',
-    e.vendor_name || '—',
-    e.payment_mode,
-    e.transaction_reference || e.remarks || '—',
-    formatPDFMoney(e.amount)
-  ])
+  const tableBody = expenses.map(e => {
+    const parts = []
+    if (e.quantity) parts.push(`Qty: ${e.quantity}`)
+    if (e.remarks) parts.push(e.remarks)
+    if (e.transaction_reference) parts.push(`Ref: ${e.transaction_reference}`)
+    const note = parts.length > 0 ? parts.join(' · ') : '—'
+    return [
+      formatDate(e.expense_date),
+      e.category,
+      e.sub_category || '—',
+      e.vendor_name || '—',
+      e.payment_mode,
+      note,
+      formatPDFMoney(e.amount)
+    ]
+  })
 
   autoTable(doc, {
     ...plainTableConfig,
@@ -749,6 +764,7 @@ export async function generateSingleExpenseVoucherPDF({ project, expense, firmNa
   const tableData = [
     ['Category', expense.category],
     ['Sub-Category', expense.sub_category || '—'],
+    ...(expense.quantity ? [['Quantity', expense.quantity]] : []),
     ['Payment Mode', expense.payment_mode || 'Cash'],
     ['Reference / UTR', expense.transaction_reference || '—'],
     ['Description / Remarks', expense.remarks || '—']
@@ -821,3 +837,181 @@ export async function generateSingleExpenseVoucherPDF({ project, expense, firmNa
   const file = new File([blob], filename, { type: 'application/pdf' })
   return { doc, filename, blob, file }
 }
+
+/**
+ * Generate a PDF statement of Income History: Date, Mode, Amount, and Location
+ */
+export async function generateIncomePDF({ project, income = [], filterSummary = {}, firmName, save = true }) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
+  const margin = 14
+  const contentW = pageW - margin * 2
+
+  const BLACK = [17, 24, 39]
+  const DARK_GRAY = [75, 85, 99]
+  const LIGHT_GRAY = [243, 244, 246]
+  const BORDER_GRAY = [229, 231, 235]
+  const LINE_COLOR = [209, 213, 219]
+
+  let y = 14
+
+  const filterTags = []
+  if (filterSummary.paymentMode) filterTags.push(`Mode: ${filterSummary.paymentMode}`)
+  if (filterSummary.startDate || filterSummary.endDate) {
+    filterTags.push(`Date: ${filterSummary.startDate || 'Start'} to ${filterSummary.endDate || 'Now'}`)
+  }
+  if (filterSummary.search) filterTags.push(`Search: "${filterSummary.search}"`)
+  const isFiltered = filterTags.length > 0
+
+  // Header
+  doc.setTextColor(...BLACK)
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.text(firmName || 'SiteLedger', margin, y + 4)
+
+  doc.setFontSize(9.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...DARK_GRAY)
+  doc.text(isFiltered ? 'Filtered Income History Statement' : 'Income History Statement', margin, y + 10)
+
+  // Right side meta
+  doc.setFontSize(8.5)
+  doc.text(`Generated: ${formatDateLong(new Date().toISOString())}`, pageW - margin, y + 4, { align: 'right' })
+  doc.text(`Project: ${project?.project_code || '—'} · ${project?.project_name || ''}`, pageW - margin, y + 10, { align: 'right' })
+
+  y += 15
+  doc.setDrawColor(...LINE_COLOR)
+  doc.setLineWidth(0.4)
+  doc.line(margin, y, pageW - margin, y)
+
+  y += 6
+
+  // Total amount
+  const totalAmount = income.reduce((s, i) => s + Number(i.amount || 0), 0)
+
+  // Details Box
+  doc.setDrawColor(...BORDER_GRAY)
+  doc.setLineWidth(0.3)
+  doc.setFillColor(252, 252, 252)
+  doc.roundedRect(margin, y, contentW, 20, 1.5, 1.5, 'FD')
+
+  // Left side: Active Filters / Project Details
+  doc.setFontSize(8.5)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...BLACK)
+  doc.text(isFiltered ? 'Active Filters Applied:' : 'Project Details:', margin + 4, y + 6)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...DARK_GRAY)
+
+  const metaText = isFiltered
+    ? filterTags.join('  |  ')
+    : `Site Location: ${project?.site_address || 'Not specified'}${project?.owner_name ? ` · Client: ${project.owner_name}` : ''}`
+  const splitMeta = doc.splitTextToSize(metaText, contentW - 65)
+  doc.text(splitMeta, margin + 4, y + 12)
+
+  // Right side: Total and Count
+  const rightX = pageW - margin - 4
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text(`Records: ${income.length}`, rightX, y + 6, { align: 'right' })
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(...BLACK)
+  doc.text(`Total: ${formatPDFMoney(totalAmount)}`, rightX, y + 13, { align: 'right' })
+
+  y += 26
+
+  // Table
+  const plainTableConfig = {
+    theme: 'plain',
+    styles: {
+      fontSize: 8,
+      textColor: BLACK,
+      cellPadding: 2.5,
+      lineColor: BORDER_GRAY,
+      lineWidth: 0.15
+    },
+    headStyles: {
+      fillColor: LIGHT_GRAY,
+      textColor: BLACK,
+      fontStyle: 'bold',
+      fontSize: 8,
+      lineColor: BORDER_GRAY,
+      lineWidth: 0.2
+    },
+    footStyles: {
+      fillColor: LIGHT_GRAY,
+      textColor: BLACK,
+      fontStyle: 'bold',
+      fontSize: 8,
+      lineColor: BORDER_GRAY,
+      lineWidth: 0.2
+    }
+  }
+
+  const tableBody = income.map(i => {
+    const loc = i.location || project?.site_address || '—'
+    const note = [i.transaction_reference ? `Ref: ${i.transaction_reference}` : '', i.remarks].filter(Boolean).join(' · ') || '—'
+    return [
+      formatDate(i.date),
+      i.payment_mode || 'Cash',
+      loc,
+      note,
+      formatPDFMoney(i.amount)
+    ]
+  })
+
+  autoTable(doc, {
+    ...plainTableConfig,
+    startY: y,
+    head: [['Date', 'Payment Mode', 'Location', 'Ref / Note', 'Amount']],
+    body: tableBody,
+    margin: { left: margin, right: margin },
+    columnStyles: {
+      0: { width: 24 },
+      1: { width: 28 },
+      2: { width: 45 },
+      4: { halign: 'right', fontStyle: 'bold', width: 34 }
+    },
+    foot: [[
+      isFiltered ? 'Total Filtered Income' : 'Total Income Received', '', '', `${income.length} Entries`,
+      formatPDFMoney(totalAmount)
+    ]]
+  })
+
+  // Footers
+  const totalPages = doc.internal.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setDrawColor(...LINE_COLOR)
+    doc.setLineWidth(0.2)
+    doc.line(margin, pageH - 10, pageW - margin, pageH - 10)
+
+    doc.setFontSize(8)
+    doc.setTextColor(...DARK_GRAY)
+    doc.setFont('helvetica', 'normal')
+    doc.text(
+      `${firmName || 'SiteLedger'} · Income History · ${project?.project_name || ''}`,
+      margin,
+      pageH - 6
+    )
+    doc.text(
+      `Page ${i} of ${totalPages}`,
+      pageW - margin,
+      pageH - 6,
+      { align: 'right' }
+    )
+  }
+
+  const prefix = (firmName || 'SiteLedger').replace(/\s+/g, '_')
+  const filename = `${prefix}_${project?.project_code || 'PRJ'}_Income_${new Date().toLocaleDateString('en-IN').replace(/\//g, '-')}.pdf`
+  if (save) doc.save(filename)
+
+  const blob = doc.output('blob')
+  const file = new File([blob], filename, { type: 'application/pdf' })
+  return { doc, filename, blob, file }
+}
+

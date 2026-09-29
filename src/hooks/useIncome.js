@@ -39,11 +39,28 @@ export function useIncome() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
+      let payload = { ...incomeData, project_id: projectId }
+      let { data, error } = await supabase
         .from('income')
-        .insert({ ...incomeData, project_id: projectId })
+        .insert(payload)
         .select()
         .single()
+
+      if (error && error.message?.includes('location')) {
+        const loc = payload.location
+        delete payload.location
+        if (loc) {
+          payload.remarks = `${payload.remarks ? payload.remarks + ' | ' : ''}Location: ${loc}`
+        }
+        const retry = await supabase
+          .from('income')
+          .insert(payload)
+          .select()
+          .single()
+        data = retry.data
+        error = retry.error
+      }
+
       if (error) throw error
       invalidateProjectCache(projectId)
       return data
@@ -59,12 +76,30 @@ export function useIncome() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
+      let payload = { ...updates }
+      let { data, error } = await supabase
         .from('income')
-        .update(updates)
+        .update(payload)
         .eq('id', id)
         .select()
         .single()
+
+      if (error && error.message?.includes('location')) {
+        const loc = payload.location
+        delete payload.location
+        if (loc) {
+          payload.remarks = `${payload.remarks ? payload.remarks + ' | ' : ''}Location: ${loc}`
+        }
+        const retry = await supabase
+          .from('income')
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single()
+        data = retry.data
+        error = retry.error
+      }
+
       if (error) throw error
       invalidateProjectCache(projectId || data?.project_id)
       return data

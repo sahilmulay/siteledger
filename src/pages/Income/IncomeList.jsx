@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { Plus, Filter, Trash2, IndianRupee, Search } from 'lucide-react'
+import { Plus, Filter, Trash2, IndianRupee, Search, Download } from 'lucide-react'
 import { useIncome } from '../../hooks/useIncome'
 import { useProjects } from '../../hooks/useProjects'
+import { useAuth } from '../../contexts/AuthContext'
+import { generateIncomePDF } from '../../lib/pdfReport'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Card } from '../../components/ui/Card'
@@ -19,6 +21,7 @@ export function IncomeList() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const { firmName } = useAuth()
   const { fetchIncome, deleteIncome, loading } = useIncome()
   const { fetchProject } = useProjects()
 
@@ -31,6 +34,7 @@ export function IncomeList() {
   const [showFilters, setShowFilters] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [downloadingPDF, setDownloadingPDF] = useState(false)
 
   const loadIncome = useCallback(async (p = 0, f = filters) => {
     const { data } = await fetchIncome(projectId, { ...f, page: p, limit: 20 })
@@ -79,6 +83,35 @@ export function IncomeList() {
 
   const totalShown = filteredIncome.reduce((s, i) => s + Number(i.amount), 0)
 
+  // Download Income PDF
+  const handleDownloadPDF = async () => {
+    if (filteredIncome.length === 0) {
+      toast.error('No income entries to download')
+      return
+    }
+    setDownloadingPDF(true)
+    try {
+      await generateIncomePDF({
+        project,
+        income: filteredIncome,
+        filterSummary: {
+          paymentMode: filters.paymentMode,
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          search: search.trim()
+        },
+        firmName,
+        save: true
+      })
+      toast.success('Income history PDF downloaded!')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate Income PDF')
+    } finally {
+      setDownloadingPDF(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
@@ -86,8 +119,16 @@ export function IncomeList() {
         subtitle={project?.project_name}
         backTo={`/projects/${projectId}`}
         rightAction={
-          <div className="flex gap-2">
-            <button onClick={() => setShowFilters(!showFilters)} className="p-2 rounded-xl hover:bg-gray-100">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF || filteredIncome.length === 0}
+              className="p-2 rounded-xl hover:bg-gray-100 disabled:opacity-40 transition-colors"
+              title="Download Income PDF"
+            >
+              <Download className="h-4 w-4 text-gray-600" />
+            </button>
+            <button onClick={() => setShowFilters(!showFilters)} className="p-2 rounded-xl hover:bg-gray-100" title="Filter Income">
               <Filter className="h-4 w-4 text-gray-600" />
             </button>
             <Button size="sm" onClick={() => navigate(`/projects/${projectId}/income/new`, { state: { from: 'income' } })}>
@@ -117,11 +158,26 @@ export function IncomeList() {
           </Card>
         )}
 
-        {/* Summary */}
+        {/* Summary & Download Button */}
         {filteredIncome.length > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4 flex items-center justify-between">
-            <span className="text-sm text-green-700">Total Shown</span>
-            <span className="font-bold text-green-800">{formatINR(totalShown)}</span>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <span className="text-xs text-green-700 font-medium block">
+                Total Received ({filteredIncome.length} {filteredIncome.length === 1 ? 'entry' : 'entries'})
+              </span>
+              <span className="font-bold text-green-800 text-lg">{formatINR(totalShown)}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleDownloadPDF}
+              loading={downloadingPDF}
+              className="bg-white border-green-300 text-green-700 hover:bg-green-100/60 shadow-sm"
+              title="Download Income History PDF"
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Button>
           </div>
         )}
 
@@ -155,7 +211,12 @@ export function IncomeList() {
                     <p className="text-lg font-bold text-green-700">{formatINR(item.amount)}</p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge color="green">{item.payment_mode}</Badge>
-                      <span className="text-xs text-gray-400">{formatDate(item.date)}</span>
+                      <span className="text-xs font-bold text-gray-800">{formatDate(item.date)}</span>
+                      {item.location && (
+                        <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                          📍 {item.location}
+                        </span>
+                      )}
                     </div>
                     {item.transaction_reference && (
                       <p className="text-xs text-gray-400 mt-1">Ref: {item.transaction_reference}</p>

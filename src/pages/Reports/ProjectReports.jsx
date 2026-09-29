@@ -5,7 +5,7 @@ import { useProjects } from '../../hooks/useProjects'
 import { useAuth } from '../../contexts/AuthContext'
 import { useIncome } from '../../hooks/useIncome'
 import { useExpenses } from '../../hooks/useExpenses'
-import { generateProjectPDF } from '../../lib/pdfReport'
+import { generateProjectPDF, generateIncomePDF } from '../../lib/pdfReport'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Card } from '../../components/ui/Card'
@@ -25,6 +25,7 @@ export function ProjectReports() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [incomePdfLoading, setIncomePdfLoading] = useState(false)
   const [sharePdfLoading, setSharePdfLoading] = useState(false)
 
   useEffect(() => {
@@ -60,6 +61,30 @@ export function ProjectReports() {
       console.error(err)
     } finally {
       setPdfLoading(false)
+    }
+  }
+
+  const handleDownloadIncomePDF = async () => {
+    if (!project) return
+    setIncomePdfLoading(true)
+    try {
+      const incRes = await fetchIncome(projectId, { limit: 1000 })
+      if (!incRes.data || incRes.data.length === 0) {
+        toast.error('No income entries found for this project')
+        return
+      }
+      await generateIncomePDF({
+        project,
+        income: incRes.data,
+        firmName,
+        save: true
+      })
+      toast.success('Income Statement PDF downloaded!')
+    } catch (err) {
+      toast.error('Failed to generate Income PDF')
+      console.error(err)
+    } finally {
+      setIncomePdfLoading(false)
     }
   }
 
@@ -180,7 +205,8 @@ export function ProjectReports() {
 
         {/* PDF Actions — no share link, no owner portal */}
         <Card className="mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3 text-sm">PDF Report</h3>
+          <h3 className="font-semibold text-gray-700 mb-1 text-sm">Project Financial Statement</h3>
+          <p className="text-xs text-gray-400 mb-3">Complete report with project details, category breakdown, income & expenses</p>
           <div className="grid grid-cols-2 gap-2">
             <Button fullWidth onClick={handleDownloadPDF} loading={pdfLoading} size="md">
               <Download className="h-4 w-4" />
@@ -191,6 +217,22 @@ export function ProjectReports() {
               Share PDF
             </Button>
           </div>
+        </Card>
+
+        {/* Income Statement PDF */}
+        <Card className="mb-4">
+          <h3 className="font-semibold text-gray-700 mb-1 text-sm">Income Statement (PDF)</h3>
+          <p className="text-xs text-gray-400 mb-3">Download complete income history with date, payment mode, location and amount</p>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={handleDownloadIncomePDF}
+            loading={incomePdfLoading}
+            size="md"
+          >
+            <Download className="h-4 w-4" />
+            Download Income PDF
+          </Button>
         </Card>
       </PageWrapper>
     </div>

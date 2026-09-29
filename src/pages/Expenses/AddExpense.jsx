@@ -53,7 +53,7 @@ export function AddExpense({ mode = 'create' }) {
   const {
     register, handleSubmit, watch, setValue, reset, control, formState: { errors, isSubmitting }
   } = useForm({
-    defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash', category: '', sub_category: '', vendor_name: '', vendor_mobile: '' }
+    defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash', category: '', sub_category: '', quantity: '', vendor_name: '', vendor_mobile: '' }
   })
 
   useEffect(() => {
@@ -62,6 +62,7 @@ export function AddExpense({ mode = 'create' }) {
         if (data) {
           reset({
             ...data,
+            quantity: data.quantity || '',
             amount: data.amount ? formatIndianAmount(data.amount) : ''
           })
           if (data.bill_image_url) setBillPreview(data.bill_image_url)
@@ -84,7 +85,7 @@ export function AddExpense({ mode = 'create' }) {
   }, [trimmedCategory, categories])
 
   const matchingCategories = useMemo(() => {
-    const all = Object.keys(categories)
+    const all = Object.keys(categories).sort((a, b) => a.localeCompare(b))
     if (!trimmedCategory) return all
     const q = trimmedCategory.toLowerCase()
     return all.filter(c => c.toLowerCase().includes(q))
@@ -99,9 +100,11 @@ export function AddExpense({ mode = 'create' }) {
   }, [trimmedSubCategory, trimmedCategory, categories])
 
   const matchingSubCategories = useMemo(() => {
-    const currentSubs = trimmedCategory && categories[trimmedCategory]
-      ? categories[trimmedCategory]
-      : Array.from(new Set(Object.values(categories).flat()))
+    const currentSubs = Array.from(new Set(
+      trimmedCategory && categories[trimmedCategory]
+        ? categories[trimmedCategory]
+        : Object.values(categories).flat()
+    )).sort((a, b) => a.localeCompare(b))
     if (!trimmedSubCategory) return currentSubs
     const q = trimmedSubCategory.toLowerCase()
     return currentSubs.filter(s => s.toLowerCase().includes(q))
@@ -352,6 +355,7 @@ export function AddExpense({ mode = 'create' }) {
       let payload = {
         category: finalCategory,
         sub_category: finalSubCategory,
+        quantity: data.quantity?.trim() || null,
         amount: parseFloat(String(data.amount).replace(/,/g, '')),
         payment_mode: data.payment_mode,
         transaction_reference: data.transaction_reference || null,
@@ -713,6 +717,15 @@ export function AddExpense({ mode = 'create' }) {
                   </div>
                 )}
               </div>
+
+              {/* Quantity (optional) */}
+              <Input
+                label="Quantity (optional)"
+                placeholder="e.g. 50 bags, 2 brass, 100 sq ft, 5 days"
+                {...register('quantity')}
+                error={errors.quantity?.message}
+                hint="Optional: e.g. units, bags, trips, brass, sq ft, days"
+              />
 
               {/* Pre-Loaded Vendor Selection & Contacts */}
               <div className="space-y-2 pt-1 border-t border-gray-100">

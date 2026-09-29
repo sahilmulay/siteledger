@@ -117,10 +117,12 @@ export function ExpenseList() {
   const totalShown = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0)
 
   // Collect all unique categories and subcategories
-  const allCategories = Array.from(new Set([
-    ...Object.keys(categoryDict),
-    ...expenses.map(e => e.category).filter(Boolean)
-  ]))
+  const allCategories = useMemo(() => {
+    return Array.from(new Set([
+      ...Object.keys(categoryDict),
+      ...expenses.map(e => e.category).filter(Boolean)
+    ])).sort((a, b) => a.localeCompare(b))
+  }, [categoryDict, expenses])
 
   const allSubCategories = useMemo(() => {
     const subs = new Set()
@@ -130,7 +132,7 @@ export function ExpenseList() {
     expenses.forEach(e => {
       if (e.sub_category) subs.add(e.sub_category)
     })
-    return Array.from(subs)
+    return Array.from(subs).sort((a, b) => a.localeCompare(b))
   }, [categoryDict, expenses])
 
   // Download filtered expenses PDF
@@ -369,7 +371,7 @@ Thank you!`
             {groupedExpenses.map(([dateKey, items]) => (
               <div key={dateKey} className="mb-5">
                 <div className="sticky top-14 z-10 bg-gray-50/95 backdrop-blur py-1.5 mb-2 px-1">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{dateKey}</span>
+                  <span className="text-xs font-bold text-gray-900 uppercase tracking-wide">{dateKey}</span>
                 </div>
                 <div className="space-y-2">
                   {items.map(item => {
@@ -403,9 +405,14 @@ Thank you!`
                           )}
                         </div>
 
-                        {item.remarks && (
-                          <p className="text-xs text-gray-700 mb-2 leading-relaxed">
-                            {item.remarks}
+                        {(item.quantity || item.remarks) && (
+                          <p className="text-xs text-gray-700 mb-2 leading-relaxed flex items-center flex-wrap gap-1.5">
+                            {item.quantity && (
+                              <span className="font-bold text-gray-900 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[11px]">
+                                Qty: {item.quantity}
+                              </span>
+                            )}
+                            {item.remarks && <span>{item.remarks}</span>}
                           </p>
                         )}
                         
@@ -524,50 +531,171 @@ Thank you!`
 
 function ExpenseFilterForm({ categories = [], categoryDict = {}, allSubCategories = [], vendors = [], filters, onApply, onClear }) {
   const [f, setF] = useState(filters)
+  const [showCategorySuggestions, setShowCategorySuggestions] = useState(false)
+  const [showSubCategorySuggestions, setShowSubCategorySuggestions] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // Sorted categories and suggestions
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => a.localeCompare(b))
+  }, [categories])
+
+  const matchingCategories = useMemo(() => {
+    const q = (f.category || '').trim().toLowerCase()
+    if (!q) return sortedCategories
+    return sortedCategories.filter(c => c.toLowerCase().includes(q))
+  }, [f.category, sortedCategories])
+
+  // Sorted sub-categories list based on selected category or all sub-categories
+  const availableSubCategories = useMemo(() => {
+    let list = []
+    if (f.category && categoryDict[f.category]) {
+      list = categoryDict[f.category]
+    } else {
+      list = allSubCategories
+    }
+    return [...list].sort((a, b) => a.localeCompare(b))
+  }, [f.category, categoryDict, allSubCategories])
+
+  const matchingSubCategories = useMemo(() => {
+    const q = (f.subCategory || '').trim().toLowerCase()
+    if (!q) return availableSubCategories
+    return availableSubCategories.filter(s => s.toLowerCase().includes(q))
+  }, [f.subCategory, availableSubCategories])
+
+  // Sorted vendors and suggestions
+  const sortedVendors = useMemo(() => {
+    return [...vendors].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }, [vendors])
 
   const trimmedVendorName = (f.vendorName || '').trim()
   const matchingSuggestions = useMemo(() => {
-    if (!vendors || vendors.length === 0) return []
-    if (!trimmedVendorName) return vendors
+    if (!sortedVendors || sortedVendors.length === 0) return []
+    if (!trimmedVendorName) return sortedVendors
     const q = trimmedVendorName.toLowerCase()
-    return vendors.filter(v => v.name && v.name.toLowerCase().includes(q))
-  }, [trimmedVendorName, vendors])
-
-  // Sub-categories list based on selected category or all sub-categories
-  const availableSubCategories = useMemo(() => {
-    if (f.category && categoryDict[f.category]) {
-      return categoryDict[f.category]
-    }
-    return allSubCategories
-  }, [f.category, categoryDict, allSubCategories])
+    return sortedVendors.filter(v => v.name && v.name.toLowerCase().includes(q))
+  }, [trimmedVendorName, sortedVendors])
 
   return (
     <div className="space-y-3">
-      <div>
+      {/* Category searchable with alphabetical suggestions */}
+      <div className="relative">
         <label className="text-xs font-medium text-gray-600 block mb-1">Category</label>
-        <select
-          value={f.category}
-          onChange={e => setF(prev => ({ ...prev, category: e.target.value, subCategory: '' }))}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"
-        >
-          <option value="">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="All Categories (Search or select)"
+            value={f.category || ''}
+            onChange={e => {
+              setF(prev => ({ ...prev, category: e.target.value, subCategory: '' }))
+              if (!showCategorySuggestions) setShowCategorySuggestions(true)
+            }}
+            onFocus={() => setShowCategorySuggestions(true)}
+            onBlur={() => setTimeout(() => setShowCategorySuggestions(false), 200)}
+            autoComplete="off"
+            className="w-full px-3 py-2 pr-7 rounded-xl border border-gray-200 text-sm bg-white"
+          />
+          {f.category && (
+            <button
+              type="button"
+              onClick={() => setF(prev => ({ ...prev, category: '', subCategory: '' }))}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs p-1"
+              title="Clear Category"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        {showCategorySuggestions && matchingCategories.length > 0 && (
+          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-40 max-h-48 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setF(prev => ({ ...prev, category: '', subCategory: '' }))
+                setShowCategorySuggestions(false)
+              }}
+              className="w-full text-left px-3.5 py-2 hover:bg-blue-50 transition-colors border-b border-gray-100 text-xs font-semibold text-gray-500"
+            >
+              All Categories (Clear)
+            </button>
+            {matchingCategories.map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => {
+                  setF(prev => ({ ...prev, category: c, subCategory: '' }))
+                  setShowCategorySuggestions(false)
+                }}
+                className={`w-full text-left px-3.5 py-2 hover:bg-blue-50 transition-colors border-b last:border-0 border-gray-50 text-sm ${
+                  f.category === c ? 'font-bold text-blue-700 bg-blue-50/50' : 'text-gray-900'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div>
+      {/* Sub-Category searchable with alphabetical suggestions */}
+      <div className="relative">
         <label className="text-xs font-medium text-gray-600 block mb-1">
           Sub-Category {f.category ? `(${f.category})` : ''}
         </label>
-        <select
-          value={f.subCategory}
-          onChange={e => setF(prev => ({ ...prev, subCategory: e.target.value }))}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"
-        >
-          <option value="">All Sub-Categories</option>
-          {availableSubCategories.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="All Sub-Categories (Search or select)"
+            value={f.subCategory || ''}
+            onChange={e => {
+              setF(prev => ({ ...prev, subCategory: e.target.value }))
+              if (!showSubCategorySuggestions) setShowSubCategorySuggestions(true)
+            }}
+            onFocus={() => setShowSubCategorySuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSubCategorySuggestions(false), 200)}
+            autoComplete="off"
+            className="w-full px-3 py-2 pr-7 rounded-xl border border-gray-200 text-sm bg-white"
+          />
+          {f.subCategory && (
+            <button
+              type="button"
+              onClick={() => setF(prev => ({ ...prev, subCategory: '' }))}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs p-1"
+              title="Clear Sub-Category"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        {showSubCategorySuggestions && matchingSubCategories.length > 0 && (
+          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-40 max-h-48 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setF(prev => ({ ...prev, subCategory: '' }))
+                setShowSubCategorySuggestions(false)
+              }}
+              className="w-full text-left px-3.5 py-2 hover:bg-blue-50 transition-colors border-b border-gray-100 text-xs font-semibold text-gray-500"
+            >
+              All Sub-Categories (Clear)
+            </button>
+            {matchingSubCategories.map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  setF(prev => ({ ...prev, subCategory: s }))
+                  setShowSubCategorySuggestions(false)
+                }}
+                className={`w-full text-left px-3.5 py-2 hover:bg-blue-50 transition-colors border-b last:border-0 border-gray-50 text-sm ${
+                  f.subCategory === s ? 'font-bold text-blue-700 bg-blue-50/50' : 'text-gray-900'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -584,21 +712,43 @@ function ExpenseFilterForm({ categories = [], categoryDict = {}, allSubCategorie
         </div>
         <div className="relative">
           <label className="text-xs font-medium text-gray-600 block mb-1">Vendor Name</label>
-          <input
-            type="text"
-            placeholder="Search vendor"
-            value={f.vendorName || ''}
-            onChange={e => {
-              setF(prev => ({ ...prev, vendorName: e.target.value }))
-              if (!showSuggestions) setShowSuggestions(true)
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            autoComplete="off"
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search vendor"
+              value={f.vendorName || ''}
+              onChange={e => {
+                setF(prev => ({ ...prev, vendorName: e.target.value }))
+                if (!showSuggestions) setShowSuggestions(true)
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              autoComplete="off"
+              className="w-full px-3 py-2 pr-7 rounded-xl border border-gray-200 text-sm bg-white"
+            />
+            {f.vendorName && (
+              <button
+                type="button"
+                onClick={() => setF(prev => ({ ...prev, vendorName: '' }))}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs p-1"
+                title="Clear Vendor"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           {showSuggestions && matchingSuggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-48 overflow-y-auto">
+            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-40 max-h-48 overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setF(prev => ({ ...prev, vendorName: '' }))
+                  setShowSuggestions(false)
+                }}
+                className="w-full text-left px-3.5 py-2 hover:bg-blue-50 transition-colors border-b border-gray-100 text-xs font-semibold text-gray-500"
+              >
+                All Vendors (Clear)
+              </button>
               {matchingSuggestions.map(v => (
                 <button
                   key={v.id || v.name}

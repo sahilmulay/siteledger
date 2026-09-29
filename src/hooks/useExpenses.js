@@ -42,27 +42,35 @@ export function useExpenses() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
+      let payload = { ...expenseData, project_id: projectId }
+      let { data, error } = await supabase
         .from('expenses')
-        .insert({ ...expenseData, project_id: projectId })
+        .insert(payload)
         .select()
         .single()
-      if (error) {
-        if (error.message && error.message.includes('vendor_mobile')) {
-          // If column doesn't exist yet in Supabase schema, save mobile in remarks
-          const { vendor_mobile, ...fallbackData } = expenseData
-          const updatedRemarks = vendor_mobile 
-            ? `${fallbackData.remarks ? fallbackData.remarks + ' | ' : ''}Phone: ${vendor_mobile}`
-            : fallbackData.remarks
-          const retry = await supabase
-            .from('expenses')
-            .insert({ ...fallbackData, remarks: updatedRemarks, project_id: projectId })
-            .select()
-            .single()
-          if (retry.error) throw retry.error
-          invalidateProjectCache(projectId)
-          return retry.data
+      if (error && (error.message?.includes('quantity') || error.message?.includes('vendor_mobile') || error.message?.includes('location'))) {
+        let fallbackData = { ...payload }
+        if (error.message.includes('quantity')) {
+          const qty = fallbackData.quantity
+          delete fallbackData.quantity
+          if (qty) {
+            fallbackData.remarks = `${fallbackData.remarks ? fallbackData.remarks + ' | ' : ''}Qty: ${qty}`
+          }
         }
+        if (error.message.includes('vendor_mobile')) {
+          const vm = fallbackData.vendor_mobile
+          delete fallbackData.vendor_mobile
+          if (vm) {
+            fallbackData.remarks = `${fallbackData.remarks ? fallbackData.remarks + ' | ' : ''}Phone: ${vm}`
+          }
+        }
+        if (error.message.includes('location')) {
+          delete fallbackData.location
+        }
+        const retry = await supabase.from('expenses').insert(fallbackData).select().single()
+        if (retry.error) throw retry.error
+        data = retry.data
+      } else if (error) {
         throw error
       }
       invalidateProjectCache(projectId)
@@ -98,13 +106,37 @@ export function useExpenses() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('expenses')
         .update(updates)
         .eq('id', id)
         .select()
         .single()
-      if (error) throw error
+      if (error && (error.message?.includes('quantity') || error.message?.includes('vendor_mobile') || error.message?.includes('location'))) {
+        let fallbackUpdates = { ...updates }
+        if (error.message.includes('quantity')) {
+          const qty = fallbackUpdates.quantity
+          delete fallbackUpdates.quantity
+          if (qty) {
+            fallbackUpdates.remarks = `${fallbackUpdates.remarks ? fallbackUpdates.remarks + ' | ' : ''}Qty: ${qty}`
+          }
+        }
+        if (error.message.includes('vendor_mobile')) {
+          const vm = fallbackUpdates.vendor_mobile
+          delete fallbackUpdates.vendor_mobile
+          if (vm) {
+            fallbackUpdates.remarks = `${fallbackUpdates.remarks ? fallbackUpdates.remarks + ' | ' : ''}Phone: ${vm}`
+          }
+        }
+        if (error.message.includes('location')) {
+          delete fallbackUpdates.location
+        }
+        const retry = await supabase.from('expenses').update(fallbackUpdates).eq('id', id).select().single()
+        if (retry.error) throw retry.error
+        data = retry.data
+      } else if (error) {
+        throw error
+      }
       invalidateProjectCache(data?.project_id)
       return data
     } catch (err) {
