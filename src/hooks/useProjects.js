@@ -22,7 +22,12 @@ export function useProjects() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       if (error) throw error
-      const result = data || []
+      const raw = data || []
+      const result = raw.map(p => ({
+        ...p,
+        rate_per_sqft: p.rate_per_sqft ?? p.metadata?.rate_per_sqft ?? null,
+        extra_works: p.extra_works ?? p.metadata?.extra_works ?? []
+      }))
       setCached(cacheKey, result)
       return result
     } catch (err) {
@@ -46,6 +51,10 @@ export function useProjects() {
         .eq('id', id)
         .single()
       if (error) throw error
+      if (data) {
+        data.rate_per_sqft = data.rate_per_sqft ?? data.metadata?.rate_per_sqft ?? null
+        data.extra_works = data.extra_works ?? data.metadata?.extra_works ?? []
+      }
       setCached(cacheKey, data)
       return data
     } catch (err) {
@@ -61,12 +70,34 @@ export function useProjects() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
+      const payload = { ...projectData, user_id: user.id }
+      let { data, error } = await supabase
         .from('projects')
-        .insert({ ...projectData, user_id: user.id })
+        .insert(payload)
         .select()
         .single()
-      if (error) throw error
+      if (error) {
+        if (error.message?.includes('rate_per_sqft') || error.message?.includes('extra_works')) {
+          const { rate_per_sqft, extra_works, ...rest } = payload
+          const fallbackPayload = {
+            ...rest,
+            metadata: {
+              ...(rest.metadata || {}),
+              ...(rate_per_sqft !== undefined ? { rate_per_sqft } : {}),
+              ...(extra_works !== undefined ? { extra_works } : {})
+            }
+          }
+          const retry = await supabase.from('projects').insert(fallbackPayload).select().single()
+          if (retry.error) throw retry.error
+          data = retry.data
+        } else {
+          throw error
+        }
+      }
+      if (data) {
+        data.rate_per_sqft = data.rate_per_sqft ?? data.metadata?.rate_per_sqft ?? null
+        data.extra_works = data.extra_works ?? data.metadata?.extra_works ?? []
+      }
       invalidateCache(`projects:${user.id}`)
       return data
     } catch (err) {
@@ -81,14 +112,36 @@ export function useProjects() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('projects')
         .update(updates)
         .eq('id', id)
         .select()
         .single()
-      if (error) throw error
-      invalidateCache(`project:${id}`)
+      if (error) {
+        if (error.message?.includes('rate_per_sqft') || error.message?.includes('extra_works')) {
+          const { data: curr } = await supabase.from('projects').select('metadata').eq('id', id).single()
+          const { rate_per_sqft, extra_works, ...rest } = updates
+          const fallbackUpdates = {
+            ...rest,
+            metadata: {
+              ...(curr?.metadata || {}),
+              ...(rate_per_sqft !== undefined ? { rate_per_sqft } : {}),
+              ...(extra_works !== undefined ? { extra_works } : {})
+            }
+          }
+          const retry = await supabase.from('projects').update(fallbackUpdates).eq('id', id).select().single()
+          if (retry.error) throw retry.error
+          data = retry.data
+        } else {
+          throw error
+        }
+      }
+      if (data) {
+        data.rate_per_sqft = data.rate_per_sqft ?? data.metadata?.rate_per_sqft ?? null
+        data.extra_works = data.extra_works ?? data.metadata?.extra_works ?? []
+      }
+      invalidateProjectCache(id)
       if (user) invalidateCache(`projects:${user.id}`)
       return data
     } catch (err) {

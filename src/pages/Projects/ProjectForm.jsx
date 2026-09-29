@@ -23,7 +23,8 @@ export function ProjectForm({ mode = 'create' }) {
     defaultValues: {
       project_status: 'Active',
       start_date: todayInputDate(),
-      floor_areas: []
+      floor_areas: [],
+      rate_per_sqft: ''
     }
   })
 
@@ -127,13 +128,23 @@ export function ProjectForm({ mode = 'create' }) {
           <Card>
             <h3 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Area & Dimensions</h3>
             <div className="space-y-4">
-              <Input
-                label="Total Area (sq ft)"
-                type="number"
-                placeholder="e.g. 1500"
-                {...register('total_area', { min: { value: 0, message: 'Must be positive' } })}
-                error={errors.total_area?.message}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Total Area (sq ft)"
+                  type="number"
+                  placeholder="e.g. 1500"
+                  {...register('total_area', { min: { value: 0, message: 'Must be positive' } })}
+                  error={errors.total_area?.message}
+                />
+                <Input
+                  label="Rate of Construction (₹ / sq ft)"
+                  type="number"
+                  placeholder="e.g. 1500"
+                  {...register('rate_per_sqft', { min: { value: 0, message: 'Must be positive' } })}
+                  error={errors.rate_per_sqft?.message}
+                  hint="Used to calculate estimated construction cost"
+                />
+              </div>
               <Input
                 label="Number of Floors"
                 type="number"

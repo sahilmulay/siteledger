@@ -1,23 +1,44 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams } from 'react-router-dom'
-import { UploadCloud, File as FileIcon, Download, Trash2 } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import {
+  UploadCloud, File as FileIcon, Download, Trash2,
+  Plus, Edit2, Calculator, CheckCircle2, TrendingUp, AlertCircle
+} from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { Modal } from '../../components/ui/Modal'
 import { Skeleton } from '../../components/ui/Spinner'
-import { formatDate } from '../../lib/formatters'
+import { formatDate, formatINR } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 export function SitePlans() {
   const { id: projectId } = useParams()
-  const { fetchProject } = useProjects()
+  const navigate = useNavigate()
+  const { fetchProject, updateProject, fetchProjectStats } = useProjects()
+
   const [project, setProject] = useState(null)
+  const [stats, setStats] = useState(null)
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef()
+
+  // Extra work modal state
+  const [showWorkModal, setShowWorkModal] = useState(false)
+  const [editingWork, setEditingWork] = useState(null)
+  const [workTypeInput, setWorkTypeInput] = useState('')
+  const [costInput, setCostInput] = useState('')
+  const [savingWork, setSavingWork] = useState(false)
+
+  // Rate of construction modal state
+  const [showRateModal, setShowRateModal] = useState(false)
+  const [rateInput, setRateInput] = useState('')
+  const [savingRate, setSavingRate] = useState(false)
 
   const loadPlans = useCallback(async () => {
     try {
@@ -33,15 +54,25 @@ export function SitePlans() {
     }
   }, [projectId])
 
-  useEffect(() => {
-    Promise.all([
-      fetchProject(projectId),
-      loadPlans()
-    ]).then(([proj]) => {
+  const loadData = useCallback(async () => {
+    try {
+      const [proj, st] = await Promise.all([
+        fetchProject(projectId),
+        fetchProjectStats(projectId, true),
+        loadPlans()
+      ])
       setProject(proj)
+      setStats(st)
+    } catch (err) {
+      console.error(err)
+    } finally {
       setLoading(false)
-    })
-  }, [projectId, fetchProject, loadPlans])
+    }
+  }, [projectId, fetchProject, fetchProjectStats, loadPlans])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -88,6 +119,88 @@ export function SitePlans() {
     }
   }
 
+  // --- Extra Work Handlers ---
+  const handleSaveExtraWork = async (e) => {
+    e.preventDefault()
+    if (!workTypeInput.trim()) {
+      toast.error('Please enter the work type')
+      return
+    }
+    const costNum = Number(costInput)
+    if (isNaN(costNum) || costNum <= 0) {
+      toast.error('Please enter a valid cost')
+      return
+    }
+
+    setSavingWork(true)
+    try {
+      const currentList = Array.isArray(project?.extra_works) ? [...project.extra_works] : []
+      let updatedList
+      if (editingWork) {
+        updatedList = currentList.map(item =>
+          (item.id === editingWork.id || item === editingWork)
+            ? { ...item, work_type: workTypeInput.trim(), cost: costNum }
+            : item
+        )
+      } else {
+        updatedList = [
+          ...currentList,
+          {
+            id: Date.now().toString(),
+            work_type: workTypeInput.trim(),
+            cost: costNum
+          }
+        ]
+      }
+
+      await updateProject(projectId, { extra_works: updatedList })
+      setProject(prev => ({ ...prev, extra_works: updatedList }))
+      setShowWorkModal(false)
+      setEditingWork(null)
+      setWorkTypeInput('')
+      setCostInput('')
+      toast.success(editingWork ? 'Extra work updated!' : 'Extra work added successfully!')
+    } catch (err) {
+      toast.error('Failed to save extra work: ' + err.message)
+    } finally {
+      setSavingWork(false)
+    }
+  }
+
+  const handleDeleteWork = async (targetIdOrIndex) => {
+    if (!window.confirm('Are you sure you want to remove this extra work?')) return
+    try {
+      const currentList = Array.isArray(project?.extra_works) ? [...project.extra_works] : []
+      const updatedList = currentList.filter((item, idx) => (item.id ? item.id !== targetIdOrIndex : idx !== targetIdOrIndex))
+      await updateProject(projectId, { extra_works: updatedList })
+      setProject(prev => ({ ...prev, extra_works: updatedList }))
+      toast.success('Extra work removed')
+    } catch (err) {
+      toast.error('Failed to delete: ' + err.message)
+    }
+  }
+
+  // --- Rate per sq ft Handler ---
+  const handleSaveRate = async (e) => {
+    e.preventDefault()
+    const rateNum = Number(rateInput)
+    if (isNaN(rateNum) || rateNum < 0) {
+      toast.error('Please enter a valid rate')
+      return
+    }
+    setSavingRate(true)
+    try {
+      await updateProject(projectId, { rate_per_sqft: rateNum || null })
+      setProject(prev => ({ ...prev, rate_per_sqft: rateNum || null }))
+      setShowRateModal(false)
+      toast.success('Construction rate updated!')
+    } catch (err) {
+      toast.error('Failed to update rate: ' + err.message)
+    } finally {
+      setSavingRate(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -101,6 +214,18 @@ export function SitePlans() {
     )
   }
 
+  // Calculations
+  const totalArea = Number(project?.total_area) || 0
+  const ratePerSqft = Number(project?.rate_per_sqft) || 0
+  const baseConstructionCost = totalArea * ratePerSqft
+
+  const extraWorks = Array.isArray(project?.extra_works) ? project.extra_works : []
+  const totalExtraWorkCost = extraWorks.reduce((acc, curr) => acc + (Number(curr.cost) || 0), 0)
+
+  const totalEstimatedCost = baseConstructionCost + totalExtraWorkCost
+  const amountReceived = Number(stats?.totalReceived) || 0
+  const amountDue = totalEstimatedCost - amountReceived
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
@@ -111,14 +236,185 @@ export function SitePlans() {
 
       <PageWrapper>
         <div className="space-y-4 pb-20">
-          
-          {/* Area Overview Card */}
+
+          {/* 1. Total Estimated Construction Cost & Financial Summary Card */}
+          <Card padding="p-4" className="bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white shadow-lg border-indigo-900/50">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs uppercase tracking-wider text-indigo-300 font-semibold flex items-center gap-1.5">
+                <Calculator className="h-4 w-4 text-indigo-400" />
+                Total Construction Cost
+              </span>
+              <button
+                onClick={() => {
+                  setRateInput(project?.rate_per_sqft || '')
+                  setShowRateModal(true)
+                }}
+                className="text-[11px] bg-white/10 hover:bg-white/20 text-indigo-200 px-2 py-0.5 rounded-lg border border-white/10 flex items-center gap-1 transition-colors"
+                title="Edit Rate of Construction"
+              >
+                <Edit2 className="h-3 w-3" />
+                {ratePerSqft > 0 ? `Rate: ₹${ratePerSqft}/sq ft` : 'Set Rate / sq ft'}
+              </button>
+            </div>
+
+            <div className="mb-3">
+              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                {formatINR(totalEstimatedCost)}
+              </div>
+              <p className="text-[11px] text-indigo-200/80 mt-1 leading-relaxed">
+                Total Area of Const × Rate of Const + Estimated Extra Work = Total Estimated Cost
+              </p>
+            </div>
+
+            {/* Formula Breakdown Card */}
+            <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm space-y-2 text-xs border border-white/10 mb-3">
+              <div className="flex items-center justify-between text-indigo-100">
+                <span>
+                  Base Construction ({totalArea.toLocaleString('en-IN')} sq ft × {formatINR(ratePerSqft)}/sq ft)
+                </span>
+                <span className="font-semibold text-white">{formatINR(baseConstructionCost)}</span>
+              </div>
+              <div className="flex items-center justify-between text-indigo-100">
+                <span>
+                  Estimated Extra Work ({extraWorks.length} {extraWorks.length === 1 ? 'item' : 'items'})
+                </span>
+                <span className="font-semibold text-emerald-300">+ {formatINR(totalExtraWorkCost)}</span>
+              </div>
+              <div className="border-t border-white/15 pt-1.5 flex items-center justify-between text-sm font-bold text-white">
+                <span>Total Estimated Cost</span>
+                <span className="text-amber-300">{formatINR(totalEstimatedCost)}</span>
+              </div>
+            </div>
+
+            {/* Financial Status: Amount Received & Amount Due */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div
+                onClick={() => navigate(`/projects/${projectId}/income`)}
+                className="bg-emerald-950/40 hover:bg-emerald-950/60 transition-colors cursor-pointer border border-emerald-500/30 rounded-xl p-2.5"
+                title="View Income Entries"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-emerald-300 font-medium">Amount Received</span>
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+                </div>
+                <span className="text-base font-bold text-emerald-400 block mt-0.5">{formatINR(amountReceived)}</span>
+                <span className="text-[10px] text-emerald-200/70 block mt-0.5">Total Income Collected</span>
+              </div>
+
+              <div className={`rounded-xl p-2.5 border ${
+                amountDue > 0
+                  ? 'bg-rose-950/40 border-rose-500/30'
+                  : 'bg-indigo-950/40 border-indigo-500/30'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[11px] font-medium ${
+                    amountDue > 0 ? 'text-rose-300' : 'text-indigo-300'
+                  }`}>
+                    {amountDue > 0 ? 'Amount Due' : 'Balance Settled'}
+                  </span>
+                  {amountDue > 0 ? (
+                    <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  )}
+                </div>
+                <span className={`text-base font-bold block mt-0.5 ${
+                  amountDue > 0 ? 'text-rose-400' : 'text-emerald-300'
+                }`}>
+                  {amountDue > 0 ? formatINR(amountDue) : '₹0 (Paid)'}
+                </span>
+                <span className={`text-[10px] block mt-0.5 ${
+                  amountDue > 0 ? 'text-rose-200/70' : 'text-indigo-200/70'
+                }`}>
+                  {amountDue > 0 ? 'Estimated Outstanding' : 'All Dues Cleared'}
+                </span>
+              </div>
+            </div>
+          </Card>
+
+          {/* 2. Estimated Charges for Extra Work Section */}
+          <Card padding="p-4" className="border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2.5">
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">Estimated Charges for Extra Work</h3>
+                <p className="text-xs text-gray-500">Additional works (Work 1, Work 2...) with type & cost</p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingWork(null)
+                  setWorkTypeInput('')
+                  setCostInput('')
+                  setShowWorkModal(true)
+                }}
+                className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0"
+              >
+                <Plus className="h-4 w-4" /> Add Work
+              </Button>
+            </div>
+
+            {extraWorks.length === 0 ? (
+              <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/60">
+                <p className="text-xs font-semibold text-gray-700">No extra work added yet</p>
+                <p className="text-[11px] text-gray-400 mt-1 max-w-xs mx-auto">
+                  Click "+ Add Work" to add extra construction charges like Compound Wall, Water Tank, Elevation, etc.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {extraWorks.map((work, idx) => (
+                  <div
+                    key={work.id || idx}
+                    className="p-2.5 bg-gray-50 hover:bg-indigo-50/40 border border-gray-100 rounded-xl flex items-center justify-between transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md flex-shrink-0">
+                        Work {idx + 1}
+                      </span>
+                      <span className="text-xs font-semibold text-gray-800 truncate">
+                        {work.work_type}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-xs font-bold text-gray-900 mr-1">{formatINR(work.cost)}</span>
+                      <button
+                        onClick={() => {
+                          setEditingWork(work)
+                          setWorkTypeInput(work.work_type)
+                          setCostInput(work.cost)
+                          setShowWorkModal(true)
+                        }}
+                        className="p-1.5 hover:bg-white rounded-lg text-gray-500 hover:text-indigo-600 transition-colors"
+                        title="Edit Work"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWork(work.id || idx)}
+                        className="p-1.5 hover:bg-white rounded-lg text-gray-500 hover:text-red-600 transition-colors"
+                        title="Delete Work"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between pt-2 px-1 border-t border-gray-100 text-xs font-semibold">
+                  <span className="text-gray-600">Total Extra Work:</span>
+                  <span className="text-indigo-700 font-bold text-sm">{formatINR(totalExtraWorkCost)}</span>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* 3. Site Area Overview Card */}
           {project && (project.total_area || (project.floor_areas && project.floor_areas.length > 0)) && (
             <Card padding="p-4" className="bg-indigo-50/50 border-indigo-100">
               <div className="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
                 <h3 className="font-bold text-indigo-900 text-sm">Site Area Overview</h3>
                 {project.total_area && (
-                  <span className="text-xs font-bold bg-indigo-600 text-white px-2 py-1 rounded-full shadow-sm">
+                  <span className="text-xs font-bold bg-indigo-600 text-white px-2.5 py-1 rounded-full shadow-sm">
                     Total: {project.total_area} sq ft
                   </span>
                 )}
@@ -140,7 +436,7 @@ export function SitePlans() {
             </Card>
           )}
 
-          {/* Upload card */}
+          {/* 4. Upload Site Plan Card */}
           <input
             ref={fileRef}
             type="file"
@@ -160,7 +456,7 @@ export function SitePlans() {
             <span className="text-xs text-gray-400">Supports PDF, DWG, DXF, PNG, JPG</span>
           </button>
 
-          {/* Plan list */}
+          {/* 5. Uploaded Plans List */}
           {plans.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
               <FileIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
@@ -209,6 +505,97 @@ export function SitePlans() {
           )}
         </div>
       </PageWrapper>
+
+      {/* Extra Work Modal */}
+      <Modal
+        isOpen={showWorkModal}
+        onClose={() => {
+          setShowWorkModal(false)
+          setEditingWork(null)
+        }}
+        title={editingWork ? 'Edit Extra Work' : 'Add Extra Work'}
+        size="md"
+      >
+        <form onSubmit={handleSaveExtraWork} className="space-y-4">
+          <Input
+            label="Work Type / Description"
+            placeholder="e.g. Compound Wall, Water Tank, Elevation..."
+            value={workTypeInput}
+            onChange={(e) => setWorkTypeInput(e.target.value)}
+            required
+            autoFocus
+          />
+          <Input
+            label="Cost of Work (₹)"
+            type="number"
+            placeholder="e.g. 50000"
+            value={costInput}
+            onChange={(e) => setCostInput(e.target.value)}
+            required
+            min="0"
+          />
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              onClick={() => {
+                setShowWorkModal(false)
+                setEditingWork(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              fullWidth
+              loading={savingWork}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {editingWork ? 'Update Work' : 'Add Work'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Rate of Construction Modal */}
+      <Modal
+        isOpen={showRateModal}
+        onClose={() => setShowRateModal(false)}
+        title="Rate of Construction"
+        size="sm"
+      >
+        <form onSubmit={handleSaveRate} className="space-y-4">
+          <Input
+            label="Rate per sq ft (₹)"
+            type="number"
+            placeholder="e.g. 1500"
+            value={rateInput}
+            onChange={(e) => setRateInput(e.target.value)}
+            min="0"
+            hint="Used to calculate base construction cost = Total Area × Rate"
+            autoFocus
+          />
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              onClick={() => setShowRateModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              fullWidth
+              loading={savingRate}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              Save Rate
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
