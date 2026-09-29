@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
-import { Input, Select, Textarea } from '../../components/ui/Input'
+import { Input, Select, Textarea, AmountInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PROJECT_STATUSES } from '../../lib/constants'
-import { todayInputDate } from '../../lib/formatters'
+import { todayInputDate, formatIndianAmount, parseIndianAmount } from '../../lib/formatters'
 
 export function ProjectForm({ mode = 'create' }) {
   const navigate = useNavigate()
@@ -53,9 +53,11 @@ export function ProjectForm({ mode = 'create' }) {
     if (mode === 'edit' && id) {
       fetchProject(id).then(data => {
         if (data) {
-          // If no floor_areas array in existing DB, make sure it's an empty array
           if (!data.floor_areas) data.floor_areas = []
-          reset(data)
+          reset({
+            ...data,
+            rate_per_sqft: data.rate_per_sqft ? formatIndianAmount(data.rate_per_sqft) : ''
+          })
         }
       })
     }
@@ -63,12 +65,16 @@ export function ProjectForm({ mode = 'create' }) {
 
   const onSubmit = async (data) => {
     try {
+      const payload = {
+        ...data,
+        rate_per_sqft: data.rate_per_sqft ? parseIndianAmount(data.rate_per_sqft) : null
+      }
       if (mode === 'create') {
-        const project = await createProject(data)
+        const project = await createProject(payload)
         toast.success('Project created successfully!')
         navigate(`/projects/${project.id}`, { replace: true })
       } else {
-        await updateProject(id, data)
+        await updateProject(id, payload)
         toast.success('Project updated successfully!')
         navigate(`/projects/${id}`, { replace: true })
       }
@@ -136,13 +142,27 @@ export function ProjectForm({ mode = 'create' }) {
                   {...register('total_area', { min: { value: 0, message: 'Must be positive' } })}
                   error={errors.total_area?.message}
                 />
-                <Input
-                  label="Rate of Construction (₹ / sq ft)"
-                  type="number"
-                  placeholder="e.g. 1500"
-                  {...register('rate_per_sqft', { min: { value: 0, message: 'Must be positive' } })}
-                  error={errors.rate_per_sqft?.message}
-                  hint="Used to calculate estimated construction cost"
+                <Controller
+                  name="rate_per_sqft"
+                  control={control}
+                  rules={{
+                    validate: (val) => {
+                      if (!val) return true
+                      const num = parseIndianAmount(val)
+                      return num >= 0 || 'Must be positive'
+                    }
+                  }}
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <AmountInput
+                      label="Rate of Construction (₹ / sq ft)"
+                      placeholder="e.g. 1,500"
+                      value={value}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      error={errors.rate_per_sqft?.message}
+                      hint="Used to calculate estimated construction cost"
+                    />
+                  )}
                 />
               </div>
               <Input

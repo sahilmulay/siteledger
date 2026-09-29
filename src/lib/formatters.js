@@ -74,3 +74,44 @@ export function formatINRCompact(amount) {
   if (num >= 1000) return `₹${(num / 1000).toFixed(1)}K`
   return `₹${num.toFixed(0)}`
 }
+
+/**
+ * Auto-format typing number to Indian comma format (e.g. 100000 -> 1,00,000)
+ */
+export function formatIndianAmount(rawVal) {
+  if (rawVal === null || rawVal === undefined || rawVal === '') return ''
+  const clean = String(rawVal).replace(/,/g, '').trim()
+  if (!clean) return ''
+  
+  const parts = clean.split('.')
+  const integerDigits = parts[0].replace(/\D/g, '')
+  if (!integerDigits && parts.length === 1) return ''
+
+  let formattedInt = ''
+  if (integerDigits) {
+    try {
+      formattedInt = new Intl.NumberFormat('en-IN').format(BigInt(integerDigits))
+    } catch {
+      formattedInt = integerDigits
+    }
+  } else {
+    formattedInt = '0'
+  }
+  
+  if (parts.length > 1) {
+    const decimalDigits = parts[1].replace(/\D/g, '').slice(0, 2)
+    return `${formattedInt}.${decimalDigits}`
+  }
+  return formattedInt
+}
+
+/**
+ * Parse Indian formatted string to plain numeric float (e.g. "1,00,000.50" -> 100000.5)
+ */
+export function parseIndianAmount(formattedVal) {
+  if (formattedVal === null || formattedVal === undefined || formattedVal === '') return 0
+  const clean = String(formattedVal).replace(/,/g, '').trim()
+  const num = parseFloat(clean)
+  return isNaN(num) ? 0 : num
+}
+

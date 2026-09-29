@@ -1,18 +1,18 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Upload, X, Image, Users, BookUser, Search, Plus, UserPlus, Check, ChevronDown } from 'lucide-react'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
-import { Input, Select, Textarea } from '../../components/ui/Input'
+import { Input, Select, Textarea, AmountInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PhoneChoiceModal } from '../../components/ui/PhoneChoiceModal'
 import { EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../lib/constants'
-import { todayInputDate } from '../../lib/formatters'
+import { todayInputDate, formatIndianAmount } from '../../lib/formatters'
 import { parseContactNumbers } from '../../lib/contactHelper'
 import { invalidateProjectCache } from '../../lib/cache'
 
@@ -51,7 +51,7 @@ export function AddExpense({ mode = 'create' }) {
   const suggestionRef = useRef(null)
 
   const {
-    register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting }
+    register, handleSubmit, watch, setValue, reset, control, formState: { errors, isSubmitting }
   } = useForm({
     defaultValues: { expense_date: todayInputDate(), payment_mode: 'Cash', category: '', sub_category: '', vendor_name: '', vendor_mobile: '' }
   })
@@ -60,7 +60,10 @@ export function AddExpense({ mode = 'create' }) {
     if (mode === 'edit' && expenseId) {
       fetchExpense(expenseId).then(data => {
         if (data) {
-          reset(data)
+          reset({
+            ...data,
+            amount: data.amount ? formatIndianAmount(data.amount) : ''
+          })
           if (data.bill_image_url) setBillPreview(data.bill_image_url)
           // Ensure category is in list, if not we could set custom category, but let's assume valid for now
         }
@@ -349,7 +352,7 @@ export function AddExpense({ mode = 'create' }) {
       let payload = {
         category: finalCategory,
         sub_category: finalSubCategory,
-        amount: parseFloat(data.amount),
+        amount: parseFloat(String(data.amount).replace(/,/g, '')),
         payment_mode: data.payment_mode,
         transaction_reference: data.transaction_reference || null,
         vendor_name: data.vendor_name || null,
@@ -428,17 +431,27 @@ export function AddExpense({ mode = 'create' }) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Card>
             <div className="space-y-4">
-              <Input
-                label="Amount (₹)"
-                type="number"
-                placeholder="0.00"
-                required
-                inputMode="decimal"
-                {...register('amount', {
+              <Controller
+                name="amount"
+                control={control}
+                rules={{
                   required: 'Amount is required',
-                  min: { value: 1, message: 'Amount must be positive' }
-                })}
-                error={errors.amount?.message}
+                  validate: (val) => {
+                    const num = Number(String(val).replace(/,/g, ''))
+                    return num > 0 || 'Amount must be positive'
+                  }
+                }}
+                render={({ field: { value, onChange, onBlur } }) => (
+                  <AmountInput
+                    label="Amount (₹)"
+                    placeholder="0.00"
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    required
+                    error={errors.amount?.message}
+                  />
+                )}
               />
 
               {/* Category input with autocomplete & add-new */}

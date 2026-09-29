@@ -8,11 +8,11 @@ import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Card } from '../../components/ui/Card'
+import { Input, AmountInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Skeleton } from '../../components/ui/Spinner'
-import { formatDate, formatINR } from '../../lib/formatters'
+import { formatDate, formatINR, formatIndianAmount, parseIndianAmount } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -126,7 +126,7 @@ export function SitePlans() {
       toast.error('Please enter the work type')
       return
     }
-    const costNum = Number(costInput)
+    const costNum = parseIndianAmount(costInput)
     if (isNaN(costNum) || costNum <= 0) {
       toast.error('Please enter a valid cost')
       return
@@ -183,7 +183,7 @@ export function SitePlans() {
   // --- Rate per sq ft Handler ---
   const handleSaveRate = async (e) => {
     e.preventDefault()
-    const rateNum = Number(rateInput)
+    const rateNum = parseIndianAmount(rateInput)
     if (isNaN(rateNum) || rateNum < 0) {
       toast.error('Please enter a valid rate')
       return
@@ -246,7 +246,7 @@ export function SitePlans() {
               </span>
               <button
                 onClick={() => {
-                  setRateInput(project?.rate_per_sqft || '')
+                  setRateInput(formatIndianAmount(project?.rate_per_sqft || ''))
                   setShowRateModal(true)
                 }}
                 className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium px-2.5 py-1 rounded-lg border border-gray-200 flex items-center gap-1 transition-colors"
@@ -381,7 +381,7 @@ export function SitePlans() {
                         onClick={() => {
                           setEditingWork(work)
                           setWorkTypeInput(work.work_type)
-                          setCostInput(work.cost)
+                          setCostInput(formatIndianAmount(work.cost))
                           setShowWorkModal(true)
                         }}
                         className="p-1.5 hover:bg-white rounded-lg text-gray-500 hover:text-indigo-600 transition-colors"
@@ -525,14 +525,12 @@ export function SitePlans() {
             required
             autoFocus
           />
-          <Input
+          <AmountInput
             label="Cost of Work (₹)"
-            type="number"
-            placeholder="e.g. 50000"
+            placeholder="e.g. 50,000"
             value={costInput}
-            onChange={(e) => setCostInput(e.target.value)}
+            onChange={(val) => setCostInput(val)}
             required
-            min="0"
           />
           <div className="flex gap-2 pt-2">
             <Button
@@ -566,13 +564,11 @@ export function SitePlans() {
         size="sm"
       >
         <form onSubmit={handleSaveRate} className="space-y-4">
-          <Input
+          <AmountInput
             label="Rate per sq ft (₹)"
-            type="number"
-            placeholder="e.g. 1500"
+            placeholder="e.g. 1,500"
             value={rateInput}
-            onChange={(e) => setRateInput(e.target.value)}
-            min="0"
+            onChange={(val) => setRateInput(val)}
             hint="Used to calculate base construction cost = Total Area × Rate"
             autoFocus
           />

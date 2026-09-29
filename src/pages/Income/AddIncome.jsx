@@ -1,10 +1,10 @@
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { useIncome } from '../../hooks/useIncome'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
-import { Input, Select, Textarea } from '../../components/ui/Input'
+import { Input, Select, Textarea, AmountInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PAYMENT_MODES } from '../../lib/constants'
@@ -18,15 +18,15 @@ export function AddIncome() {
   const { addIncome } = useIncome()
 
   const {
-    register, handleSubmit, formState: { errors, isSubmitting }
+    register, handleSubmit, control, formState: { errors, isSubmitting }
   } = useForm({
-    defaultValues: { date: todayInputDate(), payment_mode: 'Cash' }
+    defaultValues: { date: todayInputDate(), payment_mode: 'Cash', amount: '' }
   })
 
   const onSubmit = async (data) => {
     try {
       await addIncome(projectId, {
-        amount: parseFloat(data.amount),
+        amount: parseFloat(String(data.amount).replace(/,/g, '')),
         payment_mode: data.payment_mode,
         transaction_reference: data.transaction_reference || null,
         date: data.date,
@@ -58,17 +58,27 @@ export function AddIncome() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Card>
             <div className="space-y-4">
-              <Input
-                label="Amount (₹)"
-                type="number"
-                placeholder="0.00"
-                required
-                inputMode="decimal"
-                {...register('amount', {
+              <Controller
+                name="amount"
+                control={control}
+                rules={{
                   required: 'Amount is required',
-                  min: { value: 1, message: 'Amount must be positive' }
-                })}
-                error={errors.amount?.message}
+                  validate: (val) => {
+                    const num = Number(String(val).replace(/,/g, ''))
+                    return num > 0 || 'Amount must be positive'
+                  }
+                }}
+                render={({ field: { value, onChange, onBlur } }) => (
+                  <AmountInput
+                    label="Amount (₹)"
+                    placeholder="0.00"
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    required
+                    error={errors.amount?.message}
+                  />
+                )}
               />
 
               <Select

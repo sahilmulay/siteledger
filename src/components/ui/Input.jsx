@@ -78,3 +78,6 @@ export function Select({ label, error, hint, className = '', required, children,
     </div>
   )
 }
+
+export { AmountInput } from './AmountInput'
+
