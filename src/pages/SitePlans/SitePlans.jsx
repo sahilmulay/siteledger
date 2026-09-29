@@ -238,10 +238,10 @@ export function SitePlans() {
         <div className="space-y-4 pb-20">
 
           {/* 1. Total Estimated Construction Cost & Financial Summary Card */}
-          <Card padding="p-4" className="bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white shadow-lg border-indigo-900/50">
+          <Card padding="p-4" className="bg-white border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs uppercase tracking-wider text-indigo-300 font-semibold flex items-center gap-1.5">
-                <Calculator className="h-4 w-4 text-indigo-400" />
+              <span className="text-xs uppercase tracking-wider text-gray-500 font-semibold flex items-center gap-1.5">
+                <Calculator className="h-4 w-4 text-blue-600" />
                 Total Construction Cost
               </span>
               <button
@@ -249,40 +249,40 @@ export function SitePlans() {
                   setRateInput(project?.rate_per_sqft || '')
                   setShowRateModal(true)
                 }}
-                className="text-[11px] bg-white/10 hover:bg-white/20 text-indigo-200 px-2 py-0.5 rounded-lg border border-white/10 flex items-center gap-1 transition-colors"
+                className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium px-2.5 py-1 rounded-lg border border-gray-200 flex items-center gap-1 transition-colors"
                 title="Edit Rate of Construction"
               >
-                <Edit2 className="h-3 w-3" />
+                <Edit2 className="h-3.5 w-3.5 text-gray-500" />
                 {ratePerSqft > 0 ? `Rate: ₹${ratePerSqft}/sq ft` : 'Set Rate / sq ft'}
               </button>
             </div>
 
             <div className="mb-3">
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
                 {formatINR(totalEstimatedCost)}
               </div>
-              <p className="text-[11px] text-indigo-200/80 mt-1 leading-relaxed">
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
                 Total Area of Const × Rate of Const + Estimated Extra Work = Total Estimated Cost
               </p>
             </div>
 
             {/* Formula Breakdown Card */}
-            <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm space-y-2 text-xs border border-white/10 mb-3">
-              <div className="flex items-center justify-between text-indigo-100">
+            <div className="bg-gray-50 rounded-xl p-3 border border-gray-200/80 space-y-2 text-xs mb-3">
+              <div className="flex items-center justify-between text-gray-600">
                 <span>
                   Base Construction ({totalArea.toLocaleString('en-IN')} sq ft × {formatINR(ratePerSqft)}/sq ft)
                 </span>
-                <span className="font-semibold text-white">{formatINR(baseConstructionCost)}</span>
+                <span className="font-semibold text-gray-900">{formatINR(baseConstructionCost)}</span>
               </div>
-              <div className="flex items-center justify-between text-indigo-100">
+              <div className="flex items-center justify-between text-gray-600">
                 <span>
                   Estimated Extra Work ({extraWorks.length} {extraWorks.length === 1 ? 'item' : 'items'})
                 </span>
-                <span className="font-semibold text-emerald-300">+ {formatINR(totalExtraWorkCost)}</span>
+                <span className="font-semibold text-indigo-600">+ {formatINR(totalExtraWorkCost)}</span>
               </div>
-              <div className="border-t border-white/15 pt-1.5 flex items-center justify-between text-sm font-bold text-white">
-                <span>Total Estimated Cost</span>
-                <span className="text-amber-300">{formatINR(totalEstimatedCost)}</span>
+              <div className="border-t border-gray-200 pt-1.5 flex items-center justify-between text-sm font-bold">
+                <span className="text-gray-900">Total Estimated Cost</span>
+                <span className="text-blue-600">{formatINR(totalEstimatedCost)}</span>
               </div>
             </div>
 
@@ -290,41 +290,41 @@ export function SitePlans() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div
                 onClick={() => navigate(`/projects/${projectId}/income`)}
-                className="bg-emerald-950/40 hover:bg-emerald-950/60 transition-colors cursor-pointer border border-emerald-500/30 rounded-xl p-2.5"
+                className="bg-emerald-50/70 hover:bg-emerald-100/70 transition-colors cursor-pointer border border-emerald-200/80 rounded-xl p-2.5"
                 title="View Income Entries"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-emerald-300 font-medium">Amount Received</span>
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-[11px] text-emerald-800 font-semibold">Amount Received</span>
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
                 </div>
-                <span className="text-base font-bold text-emerald-400 block mt-0.5">{formatINR(amountReceived)}</span>
-                <span className="text-[10px] text-emerald-200/70 block mt-0.5">Total Income Collected</span>
+                <span className="text-base font-bold text-emerald-700 block mt-0.5">{formatINR(amountReceived)}</span>
+                <span className="text-[10px] text-emerald-600/80 block mt-0.5">Total Income Collected</span>
               </div>
 
               <div className={`rounded-xl p-2.5 border ${
                 amountDue > 0
-                  ? 'bg-rose-950/40 border-rose-500/30'
-                  : 'bg-indigo-950/40 border-indigo-500/30'
+                  ? 'bg-rose-50/70 border-rose-200/80'
+                  : 'bg-blue-50/70 border-blue-200/80'
               }`}>
                 <div className="flex items-center justify-between">
-                  <span className={`text-[11px] font-medium ${
-                    amountDue > 0 ? 'text-rose-300' : 'text-indigo-300'
+                  <span className={`text-[11px] font-semibold ${
+                    amountDue > 0 ? 'text-rose-800' : 'text-blue-800'
                   }`}>
                     {amountDue > 0 ? 'Amount Due' : 'Balance Settled'}
                   </span>
                   {amountDue > 0 ? (
-                    <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
+                    <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
                   ) : (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
                   )}
                 </div>
                 <span className={`text-base font-bold block mt-0.5 ${
-                  amountDue > 0 ? 'text-rose-400' : 'text-emerald-300'
+                  amountDue > 0 ? 'text-rose-700' : 'text-blue-700'
                 }`}>
                   {amountDue > 0 ? formatINR(amountDue) : '₹0 (Paid)'}
                 </span>
                 <span className={`text-[10px] block mt-0.5 ${
-                  amountDue > 0 ? 'text-rose-200/70' : 'text-indigo-200/70'
+                  amountDue > 0 ? 'text-rose-600/80' : 'text-blue-600/80'
                 }`}>
                   {amountDue > 0 ? 'Estimated Outstanding' : 'All Dues Cleared'}
                 </span>
