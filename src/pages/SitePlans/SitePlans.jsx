@@ -261,17 +261,12 @@ export function SitePlans() {
               <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
                 {formatINR(totalEstimatedCost)}
               </div>
-              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                Total Area of Const × Rate of Const + Estimated Extra Work = Total Estimated Cost
-              </p>
             </div>
 
             {/* Formula Breakdown Card */}
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-200/80 space-y-2 text-xs mb-3">
               <div className="flex items-center justify-between text-gray-600">
-                <span>
-                  Base Construction ({totalArea.toLocaleString('en-IN')} sq ft × {formatINR(ratePerSqft)}/sq ft)
-                </span>
+                <span>Base Construction</span>
                 <span className="font-semibold text-gray-900">{formatINR(baseConstructionCost)}</span>
               </div>
               <div className="flex items-center justify-between text-gray-600">
@@ -337,7 +332,6 @@ export function SitePlans() {
             <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2.5">
               <div>
                 <h3 className="font-bold text-gray-900 text-sm">Estimated Charges for Extra Work</h3>
-                <p className="text-xs text-gray-500">Additional works (Work 1, Work 2...) with type & cost</p>
               </div>
               <Button
                 size="sm"
