@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   UploadCloud, File as FileIcon, Download, Trash2,
-  Plus, Edit2, Calculator, CheckCircle2, TrendingUp, AlertCircle
+  Plus, Edit2, Calculator, CheckCircle2, TrendingUp, AlertCircle, Info
 } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
@@ -39,6 +39,9 @@ export function SitePlans() {
   const [showRateModal, setShowRateModal] = useState(false)
   const [rateInput, setRateInput] = useState('')
   const [savingRate, setSavingRate] = useState(false)
+
+  // Formula info modal state
+  const [showFormulaModal, setShowFormulaModal] = useState(false)
 
   const loadPlans = useCallback(async () => {
     try {
@@ -245,10 +248,21 @@ export function SitePlans() {
           {/* 1. Total Estimated Construction Cost & Financial Summary Card */}
           <Card padding="p-4" className="bg-white border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs uppercase tracking-wider text-gray-500 font-semibold flex items-center gap-1.5">
-                <Calculator className="h-4 w-4 text-blue-600" />
-                Total Construction Cost
-              </span>
+              <div className="flex items-center gap-1.5">
+                <Calculator className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                <span className="text-xs uppercase tracking-wider text-gray-700 font-bold">
+                  Total Construction Cost
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowFormulaModal(true)}
+                  className="p-1 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-full transition-all focus:outline-none"
+                  title="View Calculation Formulas"
+                  aria-label="View calculation formulas"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </div>
               <button
                 onClick={() => {
                   setRateInput(formatIndianAmount(project?.rate_per_sqft || ''))
@@ -603,6 +617,148 @@ export function SitePlans() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* 4. Formula Calculation Info Modal */}
+      <Modal
+        isOpen={showFormulaModal}
+        onClose={() => setShowFormulaModal(false)}
+        title="Cost Calculation Formulas"
+        size="lg"
+      >
+        <div className="space-y-4 text-sm text-gray-700">
+          <p className="text-xs text-gray-500">
+            Below is the complete step-by-step breakdown of how all totals, extra works, and outstanding balances are calculated for this project:
+          </p>
+
+          {/* Formula 1: Base Construction Cost */}
+          <div className="p-3.5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-xs uppercase tracking-wider text-gray-700">
+                1. Base Construction Cost
+              </span>
+              <span className="font-bold text-gray-900">{formatINR(baseConstructionCost)}</span>
+            </div>
+            <div className="text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 text-blue-700 font-semibold">
+              Base Cost = Total Area (sq ft) × Rate per sq ft
+            </div>
+            <div className="text-xs text-gray-600 flex items-center justify-between pt-1">
+              <span>Current Values:</span>
+              <span className="font-medium text-gray-800">
+                {totalArea > 0 ? `${totalArea.toLocaleString('en-IN')} sq ft` : '0 sq ft'} × {ratePerSqft > 0 ? `₹${ratePerSqft.toLocaleString('en-IN')}/sq ft` : '₹0/sq ft'} = {formatINR(baseConstructionCost)}
+              </span>
+            </div>
+          </div>
+
+          {/* Formula 2: Estimated Extra Work Charges */}
+          <div className="p-3.5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-xs uppercase tracking-wider text-gray-700">
+                2. Extra Work Charges
+              </span>
+              <span className="font-bold text-indigo-700">+{formatINR(totalExtraWorkCost)}</span>
+            </div>
+            <div className="text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 text-indigo-700 font-semibold">
+              Extra Work = Sum of all individual extra work items
+            </div>
+            <div className="text-xs text-gray-600 pt-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <span>Items Added:</span>
+                <span className="font-medium text-gray-800">
+                  {extraWorks.length} {extraWorks.length === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+              {extraWorks.length > 0 ? (
+                <div className="bg-white rounded-lg p-2 border border-gray-200 divide-y divide-gray-100 max-h-32 overflow-y-auto">
+                  {extraWorks.map((w, idx) => (
+                    <div key={w.id || idx} className="py-1 flex items-center justify-between text-xs">
+                      <span className="text-gray-700 truncate pr-2">• {w.type}</span>
+                      <span className="font-medium text-gray-900 whitespace-nowrap">{formatINR(Number(w.cost) || 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400 italic">No extra work items added yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Formula 3: Total Estimated Construction Cost */}
+          <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-xs uppercase tracking-wider text-blue-900">
+                3. Total Construction Cost
+              </span>
+              <span className="font-extrabold text-blue-700 text-base">{formatINR(totalEstimatedCost)}</span>
+            </div>
+            <div className="text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-800 font-semibold">
+              Total Cost = Base Construction Cost + Extra Work Charges
+            </div>
+            <div className="text-xs text-blue-950 flex items-center justify-between pt-1">
+              <span>Calculation:</span>
+              <span className="font-medium">
+                {formatINR(baseConstructionCost)} + {formatINR(totalExtraWorkCost)} = {formatINR(totalEstimatedCost)}
+              </span>
+            </div>
+          </div>
+
+          {/* Formula 4: Amount Received */}
+          <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-xs uppercase tracking-wider text-emerald-900">
+                4. Amount Received (Client Payments)
+              </span>
+              <span className="font-extrabold text-emerald-700 text-base">{formatINR(amountReceived)}</span>
+            </div>
+            <div className="text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-800 font-semibold">
+              Amount Received = Total of all recorded income entries
+            </div>
+            <div className="text-xs text-emerald-950 flex items-center justify-between pt-1">
+              <span>Income Collected:</span>
+              <span className="font-medium">{formatINR(amountReceived)}</span>
+            </div>
+          </div>
+
+          {/* Formula 5: Amount Due (Outstanding) */}
+          <div className={`p-3.5 rounded-xl border space-y-1.5 ${
+            amountDue > 0 ? 'border-rose-200 bg-rose-50/50' : 'border-gray-200 bg-gray-50/70'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`font-bold text-xs uppercase tracking-wider ${
+                amountDue > 0 ? 'text-rose-900' : 'text-gray-700'
+              }`}>
+                5. Amount Due (Estimated Outstanding)
+              </span>
+              <span className={`font-extrabold text-base ${
+                amountDue > 0 ? 'text-rose-700' : 'text-emerald-700'
+              }`}>
+                {amountDue > 0 ? formatINR(amountDue) : '₹0 (All Cleared)'}
+              </span>
+            </div>
+            <div className={`text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border font-semibold ${
+              amountDue > 0 ? 'border-rose-200 text-rose-800' : 'border-gray-200 text-gray-800'
+            }`}>
+              Amount Due = Total Construction Cost - Amount Received
+            </div>
+            <div className="text-xs text-gray-700 flex items-center justify-between pt-1">
+              <span>Calculation:</span>
+              <span className="font-medium">
+                {formatINR(totalEstimatedCost)} - {formatINR(amountReceived)} = {amountDue > 0 ? formatINR(amountDue) : '₹0'}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              onClick={() => setShowFormulaModal(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )
