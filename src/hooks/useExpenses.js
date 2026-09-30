@@ -10,9 +10,45 @@ export function useExpenses() {
     setLoading(true)
     setError(null)
     try {
+      if (filters.all) {
+        const PAGE_SIZE = 1000
+        let allData = []
+        let from = 0
+        while (true) {
+          let q = supabase
+            .from('expenses')
+            .select('*')
+            .eq('project_id', projectId)
+            .order('expense_date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .range(from, from + PAGE_SIZE - 1)
+
+          if (filters.category) q = q.eq('category', filters.category)
+          if (filters.subCategory) q = q.eq('sub_category', filters.subCategory)
+          if (filters.paymentMode) q = q.eq('payment_mode', filters.paymentMode)
+          if (filters.startDate) q = q.gte('expense_date', filters.startDate)
+          if (filters.endDate) q = q.lte('expense_date', filters.endDate)
+          if (filters.vendorName) q = q.ilike('vendor_name', `%${filters.vendorName}%`)
+          if (filters.search) {
+            const term = filters.search.trim().replace(/[(),]/g, '')
+            if (term) {
+              q = q.or(`category.ilike.%${term}%,sub_category.ilike.%${term}%,vendor_name.ilike.%${term}%,remarks.ilike.%${term}%,payment_mode.ilike.%${term}%,location.ilike.%${term}%,quantity.ilike.%${term}%`)
+            }
+          }
+
+          const { data, error } = await q
+          if (error) throw error
+          if (!data || data.length === 0) break
+          allData.push(...data)
+          if (data.length < PAGE_SIZE) break
+          from += PAGE_SIZE
+        }
+        return { data: allData, count: allData.length }
+      }
+
       let query = supabase
         .from('expenses')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId)
         .order('expense_date', { ascending: false })
         .order('created_at', { ascending: false })
@@ -23,16 +59,23 @@ export function useExpenses() {
       if (filters.startDate) query = query.gte('expense_date', filters.startDate)
       if (filters.endDate) query = query.lte('expense_date', filters.endDate)
       if (filters.vendorName) query = query.ilike('vendor_name', `%${filters.vendorName}%`)
+      if (filters.search) {
+        const term = filters.search.trim().replace(/[(),]/g, '')
+        if (term) {
+          query = query.or(`category.ilike.%${term}%,sub_category.ilike.%${term}%,vendor_name.ilike.%${term}%,remarks.ilike.%${term}%,payment_mode.ilike.%${term}%,location.ilike.%${term}%,quantity.ilike.%${term}%`)
+        }
+      }
 
-      const from = (filters.page || 0) * (filters.limit || 20)
-      query = query.range(from, from + (filters.limit || 20) - 1)
+      const limit = filters.limit || 20
+      const from = (filters.page || 0) * limit
+      query = query.range(from, from + limit - 1)
 
-      const { data, error } = await query
+      const { data, error, count } = await query
       if (error) throw error
-      return { data: data || [] }
+      return { data: data || [], count: count ?? (data || []).length }
     } catch (err) {
       setError(err.message)
-      return { data: [] }
+      throw err
     } finally {
       setLoading(false)
     }
@@ -96,7 +139,7 @@ export function useExpenses() {
       return data
     } catch (err) {
       setError(err.message)
-      return null
+      throw err
     } finally {
       setLoading(false)
     }
@@ -185,23 +228,42 @@ export function useExpenses() {
 }
 
 async function compressImage(file) {
-  if (!file.type.startsWith('image/')) return file
+  if (!file || !file.type || !file.type.startsWith('image/')) return file
   return new Promise((resolve) => {
     const img = new Image()
     const reader = new FileReader()
+    const fallback = () => resolve(file)
+
+    reader.onerror = fallback
+    reader.onabort = fallback
+
     reader.onload = (e) => {
+      img.onerror = fallback
+      img.onabort = fallback
       img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const MAX = 1200
-        let { width, height } = img
-        if (width > MAX) { height = (height * MAX) / width; width = MAX }
-        canvas.width = width
-        canvas.height = height
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-        canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.8)
+        try {
+          const canvas = document.createElement('canvas')
+          const MAX = 1200
+          let { width, height } = img
+          if (!width || !height) return fallback()
+          if (width > MAX) { height = (height * MAX) / width; width = MAX }
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return fallback()
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.8)
+        } catch {
+          fallback()
+        }
       }
       img.src = e.target.result
     }
-    reader.readAsDataURL(file)
+
+    try {
+      reader.readAsDataURL(file)
+    } catch {
+      fallback()
+    }
   })
 }

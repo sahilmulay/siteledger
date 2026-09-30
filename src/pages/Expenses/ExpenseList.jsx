@@ -55,23 +55,34 @@ export function ExpenseList() {
     ? userCategories
     : EXPENSE_CATEGORIES
 
-  const loadExpenses = useCallback(async (p = 0, f = filters) => {
-    const { data } = await fetchExpenses(projectId, { ...f, page: p, limit: 20 })
-    if (p === 0) setExpenses(data)
-    else setExpenses(prev => [...prev, ...data])
-    setHasMore(data.length === 20)
-  }, [projectId, filters])
+  const loadExpenses = useCallback(async (p = 0, f = filters, s = search) => {
+    try {
+      const { data } = await fetchExpenses(projectId, { ...f, search: s, page: p, limit: 20 })
+      if (p === 0) setExpenses(data)
+      else setExpenses(prev => [...prev, ...data])
+      setHasMore(data.length === 20)
+    } catch (err) {
+      toast.error('Failed to load expenses')
+      console.error(err)
+    }
+  }, [projectId, filters, search, fetchExpenses])
 
   useEffect(() => {
     fetchProject(projectId).then(setProject)
-    loadExpenses(0)
-  }, [projectId, location.key])
+  }, [projectId, fetchProject])
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(0)
+      loadExpenses(0, filters, search)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [search, filters, projectId, location.key])
 
   const applyFilters = (f) => {
     setFilters(f)
     setPage(0)
-    loadExpenses(0, f)
+    loadExpenses(0, f, search)
     setShowFilters(false)
   }
 
@@ -137,12 +148,19 @@ export function ExpenseList() {
 
   // Download filtered expenses PDF
   const handleDownloadFilteredPDF = async () => {
-    if (filteredExpenses.length === 0) {
-      toast.error('No expenses to download')
-      return
-    }
     setDownloadingPDF(true)
     try {
+      const allRes = await fetchExpenses(projectId, {
+        ...filters,
+        search: search.trim(),
+        all: true
+      })
+      const exportExpenses = allRes.data || []
+      if (exportExpenses.length === 0) {
+        toast.error('No expenses to download')
+        return
+      }
+
       const filterSummary = {
         category: filters.category,
         subCategory: filters.subCategory,
@@ -154,7 +172,7 @@ export function ExpenseList() {
       }
       await generateFilteredExpensesPDF({
         project,
-        expenses: filteredExpenses,
+        expenses: exportExpenses,
         filterSummary,
         firmName,
         save: true
@@ -166,6 +184,24 @@ export function ExpenseList() {
     } finally {
       setDownloadingPDF(false)
     }
+  }
+
+  const handleViewBill = async (e, billUrl) => {
+    e.preventDefault()
+    try {
+      const match = billUrl.match(/bill-images\/(.+)$/)
+      if (match && match[1]) {
+        const storagePath = decodeURIComponent(match[1].split('?')[0])
+        const { data } = await supabase.storage.from('bill-images').createSignedUrl(storagePath, 3600)
+        if (data?.signedUrl) {
+          window.open(data.signedUrl, '_blank')
+          return
+        }
+      }
+    } catch (err) {
+      console.error('Error generating signed bill URL:', err)
+    }
+    window.open(billUrl, '_blank')
   }
 
   // Format WhatsApp message
@@ -423,7 +459,14 @@ Thank you!`
                           
                           <div className="flex items-center gap-2">
                             {item.bill_image_url && (
-                              <a href={item.bill_image_url} target="_blank" rel="noreferrer" title="View Bill" className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                              <a
+                                href={item.bill_image_url}
+                                onClick={(e) => handleViewBill(e, item.bill_image_url)}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="View Bill"
+                                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                              >
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
                             )}
@@ -450,7 +493,7 @@ Thank you!`
             ))}
 
             {hasMore && (
-              <Button variant="ghost" fullWidth onClick={() => { const np = page + 1; setPage(np); loadExpenses(np) }}>
+              <Button variant="ghost" fullWidth onClick={() => { const np = page + 1; setPage(np); loadExpenses(np, filters, search) }}>
                 Load More
               </Button>
             )}

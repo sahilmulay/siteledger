@@ -65,21 +65,37 @@ export function Settings() {
   const [exportingCSV, setExportingCSV] = useState(false)
   const [exportingJSON, setExportingJSON] = useState(false)
 
+  // --- Helpers ---
+  const fetchAllRows = async (table, orderBy, ascending = false) => {
+    const PAGE_SIZE = 1000
+    let allRows = []
+    let from = 0
+    while (true) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .order(orderBy, { ascending })
+        .range(from, from + PAGE_SIZE - 1)
+      if (error) throw new Error(`Failed to load ${table}: ${error.message}`)
+      if (!data || data.length === 0) break
+      allRows.push(...data)
+      if (data.length < PAGE_SIZE) break
+      from += PAGE_SIZE
+    }
+    return allRows
+  }
+
   // --- Handlers ---
   const handleExportCSV = async () => {
     setExportingCSV(true)
     try {
-      const [projectsRes, expensesRes, incomeRes] = await Promise.all([
-        supabase.from('projects').select('*').order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').order('expense_date', { ascending: false }),
-        supabase.from('income').select('*').order('date', { ascending: false })
+      const [projectsData, expensesData, incomeData] = await Promise.all([
+        fetchAllRows('projects', 'created_at', false),
+        fetchAllRows('expenses', 'expense_date', false),
+        fetchAllRows('income', 'date', false)
       ])
 
-      if (projectsRes.error) throw projectsRes.error
-      if (expensesRes.error) throw expensesRes.error
-      if (incomeRes.error) throw incomeRes.error
-
-      const projectsMap = (projectsRes.data || []).reduce((acc, p) => {
+      const projectsMap = projectsData.reduce((acc, p) => {
         acc[p.id] = p
         return acc
       }, {})
@@ -103,7 +119,7 @@ export function Settings() {
       ])
 
       // Add Incomes
-      ;(incomeRes.data || []).forEach(inc => {
+      incomeData.forEach(inc => {
         const proj = projectsMap[inc.project_id] || {}
         rows.push([
           inc.date || '',
@@ -123,7 +139,7 @@ export function Settings() {
       })
 
       // Add Expenses
-      ;(expensesRes.data || []).forEach(exp => {
+      expensesData.forEach(exp => {
         const proj = projectsMap[exp.project_id] || {}
         const mobile = exp.vendor_mobile || (exp.remarks?.match(/Phone:\s*(\d+)/)?.[1]) || ''
         rows.push([
@@ -147,11 +163,14 @@ export function Settings() {
       const dataRows = rows.slice(1).sort((a, b) => new Date(b[0]) - new Date(a[0]))
       const allRows = [headerRow, ...dataRows]
 
-      // Format as CSV with UTF-8 BOM
+      // Format as CSV with UTF-8 BOM and formula injection neutralization
       const csvContent = allRows.map(row =>
         row.map(val => {
           if (val === null || val === undefined) return '""'
-          const s = String(val)
+          let s = String(val)
+          if (/^[=+\-@\t\r]/.test(s)) {
+            s = `'${s}`
+          }
           return `"${s.replace(/"/g, '""')}"`
         }).join(',')
       ).join('\r\n')
@@ -182,12 +201,12 @@ export function Settings() {
   const handleExportJSON = async () => {
     setExportingJSON(true)
     try {
-      const [projectsRes, expensesRes, incomeRes, plansRes, photosRes] = await Promise.all([
-        supabase.from('projects').select('*').order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').order('expense_date', { ascending: false }),
-        supabase.from('income').select('*').order('date', { ascending: false }),
-        supabase.from('site_plans').select('*').order('created_at', { ascending: false }),
-        supabase.from('site_photos').select('*').order('created_at', { ascending: false })
+      const [projectsData, expensesData, incomeData, plansData, photosData] = await Promise.all([
+        fetchAllRows('projects', 'created_at', false),
+        fetchAllRows('expenses', 'expense_date', false),
+        fetchAllRows('income', 'date', false),
+        fetchAllRows('site_plans', 'created_at', false),
+        fetchAllRows('site_photos', 'created_at', false)
       ])
 
       const backupData = {
@@ -197,11 +216,11 @@ export function Settings() {
         user_email: user?.email,
         vendors: vendors || [],
         categories: categories || {},
-        projects: projectsRes.data || [],
-        expenses: expensesRes.data || [],
-        income: incomeRes.data || [],
-        site_plans: plansRes.data || [],
-        site_photos: photosRes.data || []
+        projects: projectsData,
+        expenses: expensesData,
+        income: incomeData,
+        site_plans: plansData,
+        site_photos: photosData
       }
 
       const jsonStr = JSON.stringify(backupData, null, 2)

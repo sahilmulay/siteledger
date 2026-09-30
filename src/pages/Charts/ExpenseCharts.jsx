@@ -244,10 +244,13 @@ export function ExpenseCharts() {
   useEffect(() => {
     Promise.all([
       fetchProject(projectId),
-      fetchExpenses(projectId, { limit: 1000 })
+      fetchExpenses(projectId, { all: true })
     ]).then(([proj, expRes]) => {
       setProject(proj)
       setExpenses(expRes.data || [])
+      setLoading(false)
+    }).catch(err => {
+      console.error(err)
       setLoading(false)
     })
   }, [projectId, fetchProject, fetchExpenses])

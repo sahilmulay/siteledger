@@ -10,38 +10,60 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Local state for categories and vendors with localStorage fallback for fast load
-  const [categories, setCategories] = useState(() => {
-    try {
-      const cached = localStorage.getItem('siteledger_categories')
-      return cached ? JSON.parse(cached) : EXPENSE_CATEGORIES
-    } catch {
-      return EXPENSE_CATEGORIES
-    }
-  })
+  // Local state for categories and vendors with default fallbacks
+  const [categories, setCategories] = useState(EXPENSE_CATEGORIES)
+  const [vendors, setVendors] = useState([])
 
-  const [vendors, setVendors] = useState(() => {
+  // Helper to sync user metadata and user-scoped localStorage
+  const syncUserData = (u) => {
+    // Clean up legacy unscoped keys if any
     try {
-      const cached = localStorage.getItem('siteledger_vendors')
-      return cached ? JSON.parse(cached) : []
+      localStorage.removeItem('siteledger_categories')
+      localStorage.removeItem('siteledger_vendors')
     } catch {
-      return []
+      // ignore
     }
-  })
+
+    if (!u) {
+      setCategories(EXPENSE_CATEGORIES)
+      setVendors([])
+      return
+    }
+
+    const catKey = `siteledger_categories_${u.id}`
+    const venKey = `siteledger_vendors_${u.id}`
+
+    if (u.user_metadata?.custom_categories) {
+      setCategories(u.user_metadata.custom_categories)
+      try { localStorage.setItem(catKey, JSON.stringify(u.user_metadata.custom_categories)) } catch {}
+    } else {
+      try {
+        const cached = localStorage.getItem(catKey)
+        setCategories(cached ? JSON.parse(cached) : EXPENSE_CATEGORIES)
+      } catch {
+        setCategories(EXPENSE_CATEGORIES)
+      }
+    }
+
+    if (u.user_metadata?.custom_vendors) {
+      setVendors(u.user_metadata.custom_vendors)
+      try { localStorage.setItem(venKey, JSON.stringify(u.user_metadata.custom_vendors)) } catch {}
+    } else {
+      try {
+        const cached = localStorage.getItem(venKey)
+        setVendors(cached ? JSON.parse(cached) : [])
+      } catch {
+        setVendors([])
+      }
+    }
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       const u = session?.user ?? null
       setUser(u)
-      if (u?.user_metadata?.custom_categories) {
-        setCategories(u.user_metadata.custom_categories)
-        localStorage.setItem('siteledger_categories', JSON.stringify(u.user_metadata.custom_categories))
-      }
-      if (u?.user_metadata?.custom_vendors) {
-        setVendors(u.user_metadata.custom_vendors)
-        localStorage.setItem('siteledger_vendors', JSON.stringify(u.user_metadata.custom_vendors))
-      }
+      syncUserData(u)
       setLoading(false)
     })
 
@@ -49,14 +71,7 @@ export function AuthProvider({ children }) {
       setSession(session)
       const u = session?.user ?? null
       setUser(u)
-      if (u?.user_metadata?.custom_categories) {
-        setCategories(u.user_metadata.custom_categories)
-        localStorage.setItem('siteledger_categories', JSON.stringify(u.user_metadata.custom_categories))
-      }
-      if (u?.user_metadata?.custom_vendors) {
-        setVendors(u.user_metadata.custom_vendors)
-        localStorage.setItem('siteledger_vendors', JSON.stringify(u.user_metadata.custom_vendors))
-      }
+      syncUserData(u)
       setLoading(false)
     })
 
@@ -86,8 +101,8 @@ export function AuthProvider({ children }) {
 
   const updateCategories = async (newCategories) => {
     setCategories(newCategories)
-    localStorage.setItem('siteledger_categories', JSON.stringify(newCategories))
     if (user) {
+      try { localStorage.setItem(`siteledger_categories_${user.id}`, JSON.stringify(newCategories)) } catch {}
       const { data, error } = await supabase.auth.updateUser({
         data: { custom_categories: newCategories }
       })
@@ -99,8 +114,8 @@ export function AuthProvider({ children }) {
 
   const updateVendors = async (newVendors) => {
     setVendors(newVendors)
-    localStorage.setItem('siteledger_vendors', JSON.stringify(newVendors))
     if (user) {
+      try { localStorage.setItem(`siteledger_vendors_${user.id}`, JSON.stringify(newVendors)) } catch {}
       const { data, error } = await supabase.auth.updateUser({
         data: { custom_vendors: newVendors }
       })
@@ -118,6 +133,21 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     clearCache()
+    setCategories(EXPENSE_CATEGORIES)
+    setVendors([])
+    setUser(null)
+    setSession(null)
+
+    // Purge CacheStorage to prevent cross-account API response leaks (Finding 4)
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      try {
+        const cacheKeys = await window.caches.keys()
+        await Promise.all(cacheKeys.map(k => window.caches.delete(k)))
+      } catch (err) {
+        console.warn('Failed to clear CacheStorage on signOut:', err)
+      }
+    }
+
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }

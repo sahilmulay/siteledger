@@ -48,6 +48,8 @@ export function AddExpense({ mode = 'create' }) {
   const [vendorSearchQuery, setVendorSearchQuery] = useState('')
   const [phoneChoiceData, setPhoneChoiceData] = useState(null)
   const [newVendorModal, setNewVendorModal] = useState(null)
+  const [billRemoved, setBillRemoved] = useState(false)
+  const [initialBillUrl, setInitialBillUrl] = useState(null)
   const suggestionRef = useRef(null)
 
   const {
@@ -65,9 +67,14 @@ export function AddExpense({ mode = 'create' }) {
             quantity: data.quantity || '',
             amount: data.amount ? formatIndianAmount(data.amount) : ''
           })
-          if (data.bill_image_url) setBillPreview(data.bill_image_url)
-          // Ensure category is in list, if not we could set custom category, but let's assume valid for now
+          if (data.bill_image_url) {
+            setBillPreview(data.bill_image_url)
+            setInitialBillUrl(data.bill_image_url)
+          }
         }
+      }).catch(err => {
+        toast.error('Failed to load expense details')
+        console.error(err)
       })
     }
   }, [mode, expenseId, fetchExpense, reset])
@@ -325,10 +332,12 @@ export function AddExpense({ mode = 'create' }) {
       toast.error('File too large. Max 5MB.')
       return
     }
+    setBillRemoved(false)
     setBillFile(file)
     if (file.type.startsWith('image/')) {
       const reader = new FileReader()
       reader.onload = (e) => setBillPreview(e.target.result)
+      reader.onerror = () => setBillPreview('pdf')
       reader.readAsDataURL(file)
     } else {
       setBillPreview('pdf')
@@ -348,8 +357,11 @@ export function AddExpense({ mode = 'create' }) {
       let billImageUrl = null
       if (billFile) {
         setUploading(true)
-        billImageUrl = await uploadBillImage(user.id, projectId, billFile)
-        setUploading(false)
+        try {
+          billImageUrl = await uploadBillImage(user.id, projectId, billFile)
+        } finally {
+          setUploading(false)
+        }
       }
 
       let payload = {
@@ -366,10 +378,25 @@ export function AddExpense({ mode = 'create' }) {
         location: data.location || null
       }
       
-      if (billImageUrl) payload.bill_image_url = billImageUrl
+      if (billImageUrl) {
+        payload.bill_image_url = billImageUrl
+      } else if (billRemoved) {
+        payload.bill_image_url = null
+      }
 
       if (mode === 'edit' && expenseId) {
         await updateExpense(expenseId, payload)
+        // Clean up previous storage file if bill was removed or replaced
+        if ((billRemoved || billImageUrl) && initialBillUrl) {
+          try {
+            const path = initialBillUrl.split('bill-images/')[1]
+            if (path) {
+              await supabase.storage.from('bill-images').remove([decodeURIComponent(path)])
+            }
+          } catch (e) {
+            console.warn('Failed to clean up old bill image:', e)
+          }
+        }
       } else {
         await addExpense(projectId, payload)
       }
@@ -932,7 +959,7 @@ export function AddExpense({ mode = 'create' }) {
                     )}
                     <button
                       type="button"
-                      onClick={() => { setBillFile(null); setBillPreview(null) }}
+                      onClick={() => { setBillFile(null); setBillPreview(null); setBillRemoved(true); }}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
                     >
                       <X className="h-4 w-4" />

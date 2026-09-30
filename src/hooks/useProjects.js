@@ -175,15 +175,29 @@ export function useProjects() {
       if (cached) return cached
     }
     try {
-      const [incomeRes, expenseRes] = await Promise.all([
-        supabase.from('income').select('amount, date').eq('project_id', projectId),
-        supabase.from('expenses').select('amount, category, expense_date').eq('project_id', projectId)
-      ])
-      if (incomeRes.error) throw incomeRes.error
-      if (expenseRes.error) throw expenseRes.error
+      const fetchAllProjectRows = async (table, selectFields) => {
+        const PAGE_SIZE = 1000
+        let rows = []
+        let from = 0
+        while (true) {
+          const { data, error } = await supabase
+            .from(table)
+            .select(selectFields)
+            .eq('project_id', projectId)
+            .range(from, from + PAGE_SIZE - 1)
+          if (error) throw error
+          if (!data || data.length === 0) break
+          rows.push(...data)
+          if (data.length < PAGE_SIZE) break
+          from += PAGE_SIZE
+        }
+        return rows
+      }
 
-      const incomeData = incomeRes.data || []
-      const expenseData = expenseRes.data || []
+      const [incomeData, expenseData] = await Promise.all([
+        fetchAllProjectRows('income', 'amount, date'),
+        fetchAllProjectRows('expenses', 'amount, category, expense_date')
+      ])
 
       const totalReceived = incomeData.reduce((s, r) => s + Number(r.amount), 0)
       const totalExpenses = expenseData.reduce((s, r) => s + Number(r.amount), 0)
@@ -212,11 +226,8 @@ export function useProjects() {
       return result
     } catch (err) {
       console.error('fetchProjectStats error:', err)
-      return {
-        totalReceived: 0, totalExpenses: 0, balance: 0,
-        expenseCount: 0, incomeCount: 0, lastTransactionDate: null,
-        categoryBreakdown: {}
-      }
+      setError(err.message)
+      throw err
     }
   }, [])
 

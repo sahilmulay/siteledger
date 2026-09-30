@@ -38,12 +38,29 @@ export function ProjectList() {
     setStatsLoading(true)
     try {
       const projectIds = data.map(p => p.id)
-      const [incomeRes, expenseRes] = await Promise.all([
-        supabase.from('income').select('project_id, amount').in('project_id', projectIds),
-        supabase.from('expenses').select('project_id, amount, category, expense_date').in('project_id', projectIds)
+      const fetchAllRowsForProjects = async (table, cols) => {
+        const PAGE_SIZE = 1000
+        let all = []
+        let from = 0
+        while (true) {
+          const { data: rows, error } = await supabase
+            .from(table)
+            .select(cols)
+            .in('project_id', projectIds)
+            .range(from, from + PAGE_SIZE - 1)
+          if (error) throw error
+          if (!rows || rows.length === 0) break
+          all.push(...rows)
+          if (rows.length < PAGE_SIZE) break
+          from += PAGE_SIZE
+        }
+        return all
+      }
+
+      const [incomeRows, expenseRows] = await Promise.all([
+        fetchAllRowsForProjects('income', 'project_id, amount'),
+        fetchAllRowsForProjects('expenses', 'project_id, amount, category, expense_date')
       ])
-      const incomeRows = incomeRes.data || []
-      const expenseRows = expenseRes.data || []
 
       const statsMap = {}
       data.forEach(p => {
@@ -66,6 +83,9 @@ export function ProjectList() {
         statsMap[p.id].balance = statsMap[p.id].totalReceived - statsMap[p.id].totalExpenses
       })
       setStats(statsMap)
+    } catch (err) {
+      console.error('Failed to load project stats:', err)
+      toast.error('Failed to load project statistics')
     } finally {
       setStatsLoading(false)
     }

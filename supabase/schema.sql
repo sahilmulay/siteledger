@@ -9,20 +9,26 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- TABLE: projects
 -- ============================================================
 CREATE TABLE IF NOT EXISTS projects (
-  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  project_code    text NOT NULL,
-  project_name    text NOT NULL,
-  owner_name      text NOT NULL,
-  owner_mobile    text,
-  site_address    text,
-  project_status  text NOT NULL DEFAULT 'Active'
-                  CHECK (project_status IN ('Active', 'Completed', 'On Hold')),
-  share_token     uuid UNIQUE DEFAULT uuid_generate_v4(),
-  notes           text,
-  metadata        jsonb DEFAULT '{}'::jsonb,
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  updated_at      timestamptz NOT NULL DEFAULT now()
+  id                uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id           uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  project_code      text NOT NULL,
+  project_name      text NOT NULL,
+  owner_name        text NOT NULL,
+  owner_mobile      text,
+  site_address      text,
+  project_status    text NOT NULL DEFAULT 'Active'
+                    CHECK (project_status IN ('Active', 'Completed', 'On Hold')),
+  share_token       uuid UNIQUE DEFAULT uuid_generate_v4(),
+  start_date        date,
+  total_area        numeric,
+  number_of_floors  integer,
+  floor_areas       jsonb,
+  rate_per_sqft     numeric,
+  extra_works       jsonb,
+  notes             text,
+  metadata          jsonb DEFAULT '{}'::jsonb,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS projects_user_code_idx ON projects(user_id, project_code);
@@ -38,6 +44,7 @@ CREATE TABLE IF NOT EXISTS income (
   transaction_reference text,
   date                  date NOT NULL DEFAULT CURRENT_DATE,
   remarks               text,
+  location              text,
   created_at            timestamptz NOT NULL DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now()
 );
@@ -63,6 +70,8 @@ CREATE TABLE IF NOT EXISTS expenses (
   bill_image_url        text,
   bill_number           text,
   bill_date             date,
+  location              text,
+  quantity              text,
   created_at            timestamptz NOT NULL DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now()
 );
@@ -70,6 +79,37 @@ CREATE TABLE IF NOT EXISTS expenses (
 CREATE INDEX IF NOT EXISTS expenses_project_id_idx ON expenses(project_id);
 CREATE INDEX IF NOT EXISTS expenses_category_idx ON expenses(category);
 CREATE INDEX IF NOT EXISTS expenses_expense_date_idx ON expenses(expense_date DESC);
+
+-- ============================================================
+-- TABLE: site_plans
+-- ============================================================
+CREATE TABLE IF NOT EXISTS site_plans (
+  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id    uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  file_name     text NOT NULL,
+  file_url      text NOT NULL,
+  file_type     text NOT NULL,
+  storage_path  text NOT NULL,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_plans_project ON site_plans(project_id);
+
+-- ============================================================
+-- TABLE: site_photos
+-- ============================================================
+CREATE TABLE IF NOT EXISTS site_photos (
+  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id    uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  file_name     text NOT NULL,
+  photo_url     text NOT NULL,
+  storage_path  text NOT NULL,
+  taken_at      timestamptz NOT NULL DEFAULT now(),
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_photos_project ON site_photos(project_id);
+CREATE INDEX IF NOT EXISTS idx_site_photos_taken_at ON site_photos(project_id, taken_at DESC);
 
 -- ============================================================
 -- FUTURE MODULE TABLES
@@ -186,6 +226,8 @@ $$ LANGUAGE plpgsql;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE income ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE site_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE site_photos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE worker_attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE material_inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_diary ENABLE ROW LEVEL SECURITY;
@@ -204,6 +246,18 @@ CREATE POLICY "Users manage own income" ON income FOR ALL
 -- expenses
 DROP POLICY IF EXISTS "Users manage own expenses" ON expenses;
 CREATE POLICY "Users manage own expenses" ON expenses FOR ALL
+  USING (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()))
+  WITH CHECK (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()));
+
+-- site_plans
+DROP POLICY IF EXISTS "Users manage their site plans" ON site_plans;
+CREATE POLICY "Users manage their site plans" ON site_plans FOR ALL
+  USING (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()))
+  WITH CHECK (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()));
+
+-- site_photos
+DROP POLICY IF EXISTS "Users manage their site photos" ON site_photos;
+CREATE POLICY "Users manage their site photos" ON site_photos FOR ALL
   USING (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()))
   WITH CHECK (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()));
 

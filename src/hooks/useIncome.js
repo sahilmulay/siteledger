@@ -10,9 +10,40 @@ export function useIncome() {
     setLoading(true)
     setError(null)
     try {
+      if (filters.all) {
+        const PAGE_SIZE = 1000
+        let allData = []
+        let from = 0
+        while (true) {
+          let q = supabase
+            .from('income')
+            .select('*')
+            .eq('project_id', projectId)
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .range(from, from + PAGE_SIZE - 1)
+
+          if (filters.paymentMode) q = q.eq('payment_mode', filters.paymentMode)
+          if (filters.startDate) q = q.gte('date', filters.startDate)
+          if (filters.endDate) q = q.lte('date', filters.endDate)
+          if (filters.search) {
+            const term = filters.search.trim()
+            if (term) q = q.or(`payment_mode.ilike.%${term}%,remarks.ilike.%${term}%,transaction_reference.ilike.%${term}%,location.ilike.%${term}%`)
+          }
+
+          const { data, error } = await q
+          if (error) throw error
+          if (!data || data.length === 0) break
+          allData.push(...data)
+          if (data.length < PAGE_SIZE) break
+          from += PAGE_SIZE
+        }
+        return { data: allData, count: allData.length }
+      }
+
       let query = supabase
         .from('income')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
@@ -20,16 +51,21 @@ export function useIncome() {
       if (filters.paymentMode) query = query.eq('payment_mode', filters.paymentMode)
       if (filters.startDate) query = query.gte('date', filters.startDate)
       if (filters.endDate) query = query.lte('date', filters.endDate)
+      if (filters.search) {
+        const term = filters.search.trim()
+        if (term) query = query.or(`payment_mode.ilike.%${term}%,remarks.ilike.%${term}%,transaction_reference.ilike.%${term}%,location.ilike.%${term}%`)
+      }
 
-      const from = (filters.page || 0) * (filters.limit || 20)
-      query = query.range(from, from + (filters.limit || 20) - 1)
+      const limit = filters.limit || 20
+      const from = (filters.page || 0) * limit
+      query = query.range(from, from + limit - 1)
 
       const { data, error, count } = await query
       if (error) throw error
-      return { data: data || [], count }
+      return { data: data || [], count: count ?? (data || []).length }
     } catch (err) {
       setError(err.message)
-      return { data: [], count: 0 }
+      throw err
     } finally {
       setLoading(false)
     }

@@ -67,7 +67,13 @@ export function ProjectForm({ mode = 'create' }) {
     try {
       const payload = {
         ...data,
-        rate_per_sqft: data.rate_per_sqft ? parseIndianAmount(data.rate_per_sqft) : null
+        total_area: data.total_area !== '' && data.total_area != null ? parseFloat(data.total_area) : null,
+        number_of_floors: data.number_of_floors !== '' && data.number_of_floors != null ? parseInt(data.number_of_floors, 10) : null,
+        rate_per_sqft: data.rate_per_sqft ? parseIndianAmount(data.rate_per_sqft) : null,
+        start_date: data.start_date || null,
+        owner_mobile: data.owner_mobile?.trim() || null,
+        site_address: data.site_address?.trim() || null,
+        notes: data.notes?.trim() || null
       }
       if (mode === 'create') {
         const project = await createProject(payload)

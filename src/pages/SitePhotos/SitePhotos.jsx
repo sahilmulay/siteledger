@@ -26,9 +26,30 @@ export function SitePhotos() {
         .eq('project_id', projectId)
         .order('taken_at', { ascending: false })
       if (error) throw error
-      setPhotos(data || [])
+      const rows = data || []
+      if (rows.length > 0) {
+        try {
+          const paths = rows.map(r => r.storage_path).filter(Boolean)
+          if (paths.length > 0) {
+            const { data: signedList } = await supabase.storage.from('project-files').createSignedUrls(paths, 3600)
+            if (signedList) {
+              const urlMap = {}
+              signedList.forEach(item => {
+                if (item?.path && item?.signedUrl) urlMap[item.path] = item.signedUrl
+              })
+              rows.forEach(r => {
+                if (urlMap[r.storage_path]) r.photo_url = urlMap[r.storage_path]
+              })
+            }
+          }
+        } catch (signedErr) {
+          console.warn('Could not generate signed URLs, using stored photo_url:', signedErr)
+        }
+      }
+      setPhotos(rows)
     } catch (err) {
       console.error(err)
+      toast.error('Failed to load site photos')
     }
   }, [projectId])
 
@@ -79,11 +100,14 @@ export function SitePhotos() {
   const handleDelete = async (photo) => {
     if (!window.confirm('Delete this photo?')) return
     try {
-      await supabase.storage.from('project-files').remove([photo.storage_path])
-      await supabase.from('site_photos').delete().eq('id', photo.id)
+      const { error: storageErr } = await supabase.storage.from('project-files').remove([photo.storage_path])
+      if (storageErr) throw new Error(storageErr.message || 'Storage deletion failed')
+      const { error: dbErr } = await supabase.from('site_photos').delete().eq('id', photo.id)
+      if (dbErr) throw new Error(dbErr.message || 'Database deletion failed')
       toast.success('Photo deleted successfully!')
       loadPhotos()
     } catch (err) {
+      console.error(err)
       toast.error('Failed to delete photo: ' + err.message)
     }
   }

@@ -44,8 +44,8 @@ export function ProjectReports() {
     setPdfLoading(true)
     try {
       const [incRes, expRes] = await Promise.all([
-        fetchIncome(projectId, { limit: 500 }),
-        fetchExpenses(projectId, { limit: 500 })
+        fetchIncome(projectId, { all: true }),
+        fetchExpenses(projectId, { all: true })
       ])
       await generateProjectPDF({
         project,
@@ -68,7 +68,7 @@ export function ProjectReports() {
     if (!project) return
     setIncomePdfLoading(true)
     try {
-      const incRes = await fetchIncome(projectId, { limit: 1000 })
+      const incRes = await fetchIncome(projectId, { all: true })
       if (!incRes.data || incRes.data.length === 0) {
         toast.error('No income entries found for this project')
         return
@@ -93,8 +93,8 @@ export function ProjectReports() {
     setSharePdfLoading(true)
     try {
       const [incRes, expRes] = await Promise.all([
-        fetchIncome(projectId, { limit: 500 }),
-        fetchExpenses(projectId, { limit: 500 })
+        fetchIncome(projectId, { all: true }),
+        fetchExpenses(projectId, { all: true })
       ])
       const { file, filename } = await generateProjectPDF({
         project,

@@ -58,20 +58,83 @@ CREATE POLICY "Users manage their site photos"
 -- the bucket already exists (create "project-files" manually
 -- as a private bucket in the dashboard first).
 
--- Allow authenticated users to upload/read their own project files
-INSERT INTO storage.buckets (id, name, public)
-  VALUES ('project-files', 'project-files', true)
-  ON CONFLICT (id) DO NOTHING;
+-- Storage bucket: project-files (for site plans and photos)
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+  VALUES ('project-files', 'project-files', false, 52428800) -- 50MB limit
+  ON CONFLICT (id) DO UPDATE SET public = false, file_size_limit = 52428800;
 
--- Storage policy: allow authenticated users to manage their files
-CREATE POLICY "Authenticated users can upload project files"
+-- Ensure existing bucket is private
+UPDATE storage.buckets SET public = false WHERE id = 'project-files';
+
+-- Drop any previous insecure or existing policies
+DROP POLICY IF EXISTS "Authenticated users can upload project files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can view project files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can delete their project files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload their project files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view their project files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their project files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their project files" ON storage.objects;
+
+-- INSERT: Only project owner can upload files
+CREATE POLICY "Users can upload their project files"
   ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'project-files' AND auth.role() = 'authenticated');
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'project-files'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR EXISTS (
+        SELECT 1 FROM public.projects
+        WHERE projects.id::text = (storage.foldername(name))[2]
+        AND projects.user_id = auth.uid()
+      )
+    )
+  );
 
-CREATE POLICY "Authenticated users can view project files"
+-- SELECT: Only project owner can view/list files
+CREATE POLICY "Users can view their project files"
   ON storage.objects FOR SELECT
-  USING (bucket_id = 'project-files');
+  TO authenticated
+  USING (
+    bucket_id = 'project-files'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR EXISTS (
+        SELECT 1 FROM public.projects
+        WHERE projects.id::text = (storage.foldername(name))[2]
+        AND projects.user_id = auth.uid()
+      )
+    )
+  );
 
-CREATE POLICY "Authenticated users can delete their project files"
+-- UPDATE: Only project owner can update files
+CREATE POLICY "Users can update their project files"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'project-files'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR EXISTS (
+        SELECT 1 FROM public.projects
+        WHERE projects.id::text = (storage.foldername(name))[2]
+        AND projects.user_id = auth.uid()
+      )
+    )
+  );
+
+-- DELETE: Only project owner can delete files
+CREATE POLICY "Users can delete their project files"
   ON storage.objects FOR DELETE
-  USING (bucket_id = 'project-files' AND auth.role() = 'authenticated');
+  TO authenticated
+  USING (
+    bucket_id = 'project-files'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR EXISTS (
+        SELECT 1 FROM public.projects
+        WHERE projects.id::text = (storage.foldername(name))[2]
+        AND projects.user_id = auth.uid()
+      )
+    )
+  );

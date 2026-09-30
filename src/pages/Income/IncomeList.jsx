@@ -36,22 +36,34 @@ export function IncomeList() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
 
-  const loadIncome = useCallback(async (p = 0, f = filters) => {
-    const { data } = await fetchIncome(projectId, { ...f, page: p, limit: 20 })
-    if (p === 0) setIncome(data)
-    else setIncome(prev => [...prev, ...data])
-    setHasMore(data.length === 20)
-  }, [projectId, filters])
+  const loadIncome = useCallback(async (p = 0, f = filters, s = search) => {
+    try {
+      const { data } = await fetchIncome(projectId, { ...f, search: s, page: p, limit: 20 })
+      if (p === 0) setIncome(data)
+      else setIncome(prev => [...prev, ...data])
+      setHasMore(data.length === 20)
+    } catch (err) {
+      toast.error('Failed to load income entries')
+      console.error(err)
+    }
+  }, [projectId, filters, search, fetchIncome])
 
   useEffect(() => {
     fetchProject(projectId).then(setProject)
-    loadIncome(0)
-  }, [projectId, location.key])
+  }, [projectId, fetchProject])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(0)
+      loadIncome(0, filters, search)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [search, filters, projectId, location.key])
 
   const applyFilters = (f) => {
     setFilters(f)
     setPage(0)
-    loadIncome(0, f)
+    loadIncome(0, f, search)
     setShowFilters(false)
   }
 
@@ -85,15 +97,22 @@ export function IncomeList() {
 
   // Download Income PDF
   const handleDownloadPDF = async () => {
-    if (filteredIncome.length === 0) {
-      toast.error('No income entries to download')
-      return
-    }
     setDownloadingPDF(true)
     try {
+      const allRes = await fetchIncome(projectId, {
+        ...filters,
+        search: search.trim(),
+        all: true
+      })
+      const exportIncome = allRes.data || []
+      if (exportIncome.length === 0) {
+        toast.error('No income entries to download')
+        return
+      }
+
       await generateIncomePDF({
         project,
-        income: filteredIncome,
+        income: exportIncome,
         filterSummary: {
           paymentMode: filters.paymentMode,
           startDate: filters.startDate,
@@ -234,7 +253,7 @@ export function IncomeList() {
               </Card>
             ))}
             {hasMore && (
-              <Button variant="ghost" fullWidth onClick={() => { const np = page + 1; setPage(np); loadIncome(np) }}>
+              <Button variant="ghost" fullWidth onClick={() => { const np = page + 1; setPage(np); loadIncome(np, filters, search) }}>
                 Load More
               </Button>
             )}

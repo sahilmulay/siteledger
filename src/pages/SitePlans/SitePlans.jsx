@@ -51,6 +51,7 @@ export function SitePlans() {
       setPlans(data || [])
     } catch (err) {
       console.error(err)
+      toast.error('Failed to load site plans')
     }
   }, [projectId])
 
@@ -65,6 +66,7 @@ export function SitePlans() {
       setStats(st)
     } catch (err) {
       console.error(err)
+      toast.error('Failed to load project data')
     } finally {
       setLoading(false)
     }
@@ -110,11 +112,14 @@ export function SitePlans() {
   const handleDelete = async (plan) => {
     if (!window.confirm(`Delete "${plan.file_name}"?`)) return
     try {
-      await supabase.storage.from('project-files').remove([plan.storage_path])
-      await supabase.from('site_plans').delete().eq('id', plan.id)
+      const { error: storageErr } = await supabase.storage.from('project-files').remove([plan.storage_path])
+      if (storageErr) throw new Error(storageErr.message || 'Storage deletion failed')
+      const { error: dbErr } = await supabase.from('site_plans').delete().eq('id', plan.id)
+      if (dbErr) throw new Error(dbErr.message || 'Database deletion failed')
       toast.success('Site plan deleted successfully!')
       loadPlans()
     } catch (err) {
+      console.error(err)
       toast.error('Failed to delete plan: ' + err.message)
     }
   }
@@ -477,6 +482,19 @@ export function SitePlans() {
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <a
                         href={plan.file_url}
+                        onClick={async (e) => {
+                          e.preventDefault()
+                          try {
+                            const { data } = await supabase.storage.from('project-files').createSignedUrl(plan.storage_path, 3600)
+                            if (data?.signedUrl) {
+                              window.open(data.signedUrl, '_blank')
+                              return
+                            }
+                          } catch (err) {
+                            console.error('Error generating signed URL:', err)
+                          }
+                          window.open(plan.file_url, '_blank')
+                        }}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 transition-colors"

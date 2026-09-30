@@ -40,13 +40,17 @@ Track project-wise income and expenses for civil engineers, contractors, builder
 
 ### Step 1: Supabase Setup
 
+**For a new project:**
 1. Go to [supabase.com](https://supabase.com) → Create new project
 2. Go to **SQL Editor** → New Query
-3. Paste and run `supabase/schema.sql`
-4. Paste and run `supabase/storage.sql`
+3. Paste and run `supabase/schema.sql` (creates all tables, RLS policies, triggers, and functions)
+4. Paste and run `supabase/storage.sql` and `supabase/update_v3_site_files.sql` (sets up private storage buckets with hardened RLS policies)
 5. Go to **Settings → API** → Copy:
    - `Project URL`
    - `anon public` key
+
+**For existing deployments:**
+Run `supabase_updates.sql` in the Supabase SQL Editor. This script idempotently updates the schema, adds missing columns/tables (`site_plans`, `site_photos`, project dimensions, extra works, quantities, locations), hardens storage buckets to private, and installs owner-scoped RLS policies.
 
 ### Step 2: Environment Variables
 
