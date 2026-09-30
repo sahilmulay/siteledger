@@ -137,6 +137,16 @@ export function IncomeList() {
         title="Income History"
         subtitle={project?.project_name}
         backTo={`/projects/${projectId}`}
+        info={{
+          title: 'Income History (Client Payments)',
+          description: 'This section tracks all money, stage payments, and advances received from the client for this project.',
+          points: [
+            'View date, amount received, payment mode (Cash, UPI, Cheque, Bank Transfer), and reference notes.',
+            'Filter payments by payment method or date range.',
+            'Click the download icon on the top right to export an Income PDF statement.',
+            'Click "+" to record a new client payment.'
+          ]
+        }}
         rightAction={
           <div className="flex items-center gap-1.5">
             <button

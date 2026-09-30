@@ -115,6 +115,16 @@ export function ProjectForm({ mode = 'create' }) {
       <Header
         title={mode === 'create' ? 'New Project' : 'Edit Project'}
         backTo="/projects"
+        info={{
+          title: mode === 'create' ? 'Create New Project' : 'Edit Project',
+          description: 'Fill in this form to set up a new construction site or update its details.',
+          points: [
+            'Project Code & Name: Keep project codes short (like PR01, PR02) and name easy to identify.',
+            'Owner / Client details: Save client name and phone number for quick access and WhatsApp reports.',
+            'Site Address: Physical location of the construction site.',
+            'Total Area & Rate (Optional): Enter built-up area (sq ft) and construction rate to auto-calculate the estimated project budget.'
+          ]
+        }}
       />
       <PageWrapper>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

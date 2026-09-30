@@ -10,6 +10,7 @@ import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Card } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/Badge'
 import { Skeleton } from '../../components/ui/Spinner'
+import { InfoButton } from '../../components/ui/InfoButton'
 import { formatINR, formatDate } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
 
@@ -101,6 +102,17 @@ export function ProjectDashboard() {
         badge={<StatusBadge status={project.project_status} />}
         subtitle={`${project.project_code} · ${project.owner_name}`}
         backTo="/projects"
+        info={{
+          title: 'Project Dashboard',
+          description: 'This is the main overview of this project. It tracks money received, expenses spent, running cash balance, and project assets.',
+          points: [
+            'Total Received: Total payments and advances collected from the client.',
+            'Total Expenses: Total money spent on materials, labor, machinery, and daily site work.',
+            'Current Balance: Money in hand (Received minus Expenses).',
+            'Stat Cards: Tap any card to view detailed records, plans, photos, charts, or reports.',
+            'Quick Action: Use the green "Add Income" and red "Add Expense" buttons at the bottom for instant entries.'
+          ]
+        }}
         rightAction={
           <div className="flex items-center gap-1">
             <button
@@ -194,7 +206,19 @@ export function ProjectDashboard() {
           {/* Expense Breakdown */}
           {(stats?.totalExpenses || 0) > 0 && (
             <Card className="mb-4">
-              <h3 className="font-bold text-gray-800 mb-3 text-sm">Expense Breakdown</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-800 text-sm">Expense Breakdown</h3>
+                <InfoButton
+                  title="Expense Breakdown"
+                  description="This section shows which construction categories (such as Cement, Steel, Labor, etc.) have consumed your budget."
+                  points={[
+                    'Shows the exact amount spent in each category.',
+                    'Progress bars indicate the percentage share of each category against total expenses.',
+                    'Helps you quickly check which materials or services cost the most.'
+                  ]}
+                  size="xs"
+                />
+              </div>
               <div className="space-y-3">
                 {Object.entries(stats?.categoryBreakdown || {})
                   .filter(([k]) => k && k !== 'undefined')

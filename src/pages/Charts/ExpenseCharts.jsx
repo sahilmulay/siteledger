@@ -368,6 +368,16 @@ export function ExpenseCharts() {
         title="Expense Charts"
         subtitle={project?.project_name ? `${project.project_name} (${project.project_code})` : 'Visual Analytics'}
         backTo={`/projects/${projectId}`}
+        info={{
+          title: 'Expense Analytics & Charts',
+          description: 'Visual graphs and breakdown showing where your site expenses are spent.',
+          points: [
+            'Interactive Pie Charts: View percentage share of each material, labor, and machinery category.',
+            'Sub-category Drill-down: Tap any category to inspect individual item costs.',
+            'Vendor Distribution: Identify which suppliers receive the largest share of payments.',
+            'Cost Control: Spot high spending areas to keep your project within budget.'
+          ]
+        }}
         rightAction={
           <button
             onClick={() => navigate(`/projects/${projectId}/expenses`)}

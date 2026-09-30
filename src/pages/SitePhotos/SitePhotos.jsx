@@ -140,6 +140,16 @@ export function SitePhotos() {
         title="Site Photos"
         subtitle={project?.project_name ? `${project.project_name} (${project.project_code})` : 'Site Progress'}
         backTo={`/projects/${projectId}`}
+        info={{
+          title: 'Site Photos Gallery',
+          description: 'A photo diary of your construction progress from foundation to finishing.',
+          points: [
+            'Take pictures with your phone camera or upload images from your gallery.',
+            'Photos are organized chronologically by date taken.',
+            'Tap on any photo to open full-screen view or delete if needed.',
+            'Useful for documenting work progress for clients and site records.'
+          ]
+        }}
         rightAction={
           <button
             onClick={() => fileRef.current?.click()}

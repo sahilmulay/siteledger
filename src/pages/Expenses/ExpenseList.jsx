@@ -264,6 +264,16 @@ Thank you!`
         title="Expense History"
         subtitle={project?.project_name}
         backTo={`/projects/${projectId}`}
+        info={{
+          title: 'Site Expenses History',
+          description: 'This section tracks all money spent on materials, worker wages, equipment, and site work.',
+          points: [
+            'Search & Filter: Search any expense by vendor, item, or remark, or filter by category and date.',
+            'View & Edit: Tap on any expense to view full details or change amounts.',
+            'Bill Photos: Open attached invoice/bill receipts directly on your phone.',
+            'WhatsApp & PDF: Share individual payment slips via WhatsApp or export filtered expense statements to PDF.'
+          ]
+        }}
         rightAction={
           <div className="flex gap-2">
             <button

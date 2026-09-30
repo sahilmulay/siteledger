@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { InfoButton } from '../ui/InfoButton'
 
-export function Header({ title, subtitle, backTo, rightAction, backLabel, badge }) {
+export function Header({ title, subtitle, backTo, rightAction, backLabel, badge, info }) {
   const navigate = useNavigate()
 
   const handleBack = () => {
@@ -22,9 +23,17 @@ export function Header({ title, subtitle, backTo, rightAction, backLabel, badge 
           </button>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <h1 className="text-lg font-bold text-gray-900 truncate leading-tight">{title}</h1>
             {badge && <div className="flex-shrink-0">{badge}</div>}
+            {info && (
+              <InfoButton
+                title={typeof info === 'object' && info.title ? info.title : (typeof title === 'string' ? title : 'Information')}
+                description={typeof info === 'object' ? info.description : info}
+                points={typeof info === 'object' ? info.points : []}
+                size="sm"
+              />
+            )}
           </div>
           {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
         </div>

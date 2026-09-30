@@ -52,6 +52,16 @@ export function AddIncome() {
         title="Add Income"
         subtitle="Money Received"
         backTo={location.state?.from === 'income' ? `/projects/${projectId}/income` : `/projects/${projectId}`}
+        info={{
+          title: 'Record Client Payment',
+          description: 'Record any payment or advance received from the client for this project.',
+          points: [
+            'Amount: Enter the received amount (commas are added automatically as you type).',
+            'Payment Mode: Choose Cash, UPI, Cheque, or Bank Transfer.',
+            'Transaction Reference: Save cheque number or UPI transaction ID for proof.',
+            'Remarks: Mention work stage or notes (e.g. "Slab casting advance").'
+          ]
+        }}
       />
 
       <PageWrapper>

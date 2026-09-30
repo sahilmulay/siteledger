@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase'
 import { formatDate } from '../../lib/formatters'
 import { parseContactNumbers } from '../../lib/contactHelper'
 import { PhoneChoiceModal } from '../../components/ui/PhoneChoiceModal'
+import { InfoButton } from '../../components/ui/InfoButton'
 import toast from 'react-hot-toast'
 
 export function Settings() {
@@ -523,18 +524,41 @@ export function Settings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Settings" />
+      <Header
+        title="Settings"
+        info={{
+          title: 'Settings & Preferences',
+          description: 'Manage your company identity, vendor contact directory, expense categories, and data backups.',
+          points: [
+            'Firm Name: Displayed on the top of generated PDF statements, reports, and bills.',
+            'Vendor Directory: Pre-save frequent suppliers and subcontractors with phone numbers.',
+            'Expense Categories: Add or customize material and labor categories.',
+            'Backup & Export: Export your complete financial ledger to Excel/CSV or JSON backup.'
+          ]
+        }}
+      />
       <PageWrapper>
         {/* Profile & Firm Name */}
         <Card className="mb-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
-              <User className="h-6 w-6 text-blue-700" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                <User className="h-6 w-6 text-blue-700" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 truncate">{user?.email}</p>
+                <p className="text-xs text-gray-400">Contractor Account</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 truncate">{user?.email}</p>
-              <p className="text-xs text-gray-400">Contractor Account</p>
-            </div>
+            <InfoButton
+              title="Firm Profile"
+              description="Your company / contractor name is shown on the top of all PDF statements, invoices, and shareable WhatsApp messages."
+              points={[
+                'Enter your company or firm name (e.g. JadhavPatil Construction).',
+                'Click "Save Firm Name" to update.'
+              ]}
+              size="xs"
+            />
           </div>
 
           <form onSubmit={handleSaveFirmName} className="space-y-3 pt-3 border-t border-gray-100">
@@ -553,12 +577,24 @@ export function Settings() {
 
         {/* Pre-Load Vendors Directory */}
         <Card className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Users className="h-5 w-5 text-blue-700" />
-            <div>
-              <h3 className="font-semibold text-gray-900 text-sm">Vendor Directory (Pre-Loaded Vendors)</h3>
-              <p className="text-xs text-gray-500">Save frequent vendors so you don't have to type them every time</p>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-700" />
+              <div>
+                <h3 className="font-semibold text-gray-900 text-sm">Vendor Directory (Pre-Loaded Vendors)</h3>
+                <p className="text-xs text-gray-500">Save frequent vendors so you don't have to type them every time</p>
+              </div>
             </div>
+            <InfoButton
+              title="Vendor Directory"
+              description="Your suppliers, contractors, and labor mistri contact book."
+              points={[
+                'Save supplier names and 10-digit mobile numbers.',
+                'Use "Pick Contact" on phone to select directly from your phone address book.',
+                'When adding expenses, type vendor name to get instant suggestions.'
+              ]}
+              size="xs"
+            />
           </div>
 
           {/* Add Vendor Form */}
@@ -652,7 +688,19 @@ export function Settings() {
             <div className="flex items-center gap-2 min-w-0">
               <Tag className="h-5 w-5 text-blue-700 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm truncate">Expense Categories</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-semibold text-gray-900 text-sm truncate">Expense Categories</h3>
+                  <InfoButton
+                    title="Expense Categories"
+                    description="Customize the categories and sub-categories to match how you manage your construction expenses."
+                    points={[
+                      'Add new categories (e.g. Electrical, Plumbing, Fabrication).',
+                      'Click on a category to expand and add specific sub-categories.',
+                      'Click "Reset" if you want to restore the standard construction categories.'
+                    ]}
+                    size="xs"
+                  />
+                </div>
                 <p className="text-xs text-gray-500 truncate">Add, edit, or customize categories</p>
               </div>
             </div>
@@ -781,9 +829,21 @@ export function Settings() {
 
         {/* Data Backup & Export */}
         <Card className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Database className="h-4 w-4 text-emerald-600" />
-            <h3 className="font-semibold text-gray-700 text-sm">Data Backup & Export</h3>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-emerald-600" />
+              <h3 className="font-semibold text-gray-700 text-sm">Data Backup & Export</h3>
+            </div>
+            <InfoButton
+              title="Backup & Export"
+              description="Download all your records safely to your computer or phone."
+              points={[
+                'Excel / CSV Export: Generates a spreadsheet file with all projects, expenses, and income.',
+                'Full JSON Backup: Complete backup of all accounts, vendors, categories, and documents.',
+                'Keep regular backups so your construction accounting data is always secure.'
+              ]}
+              size="xs"
+            />
           </div>
           <p className="text-xs text-gray-500 mb-3">
             Export all your project ledgers, income, expenses, and vendor records. Open in Microsoft Excel, Google Sheets, or keep as a safe offline backup.

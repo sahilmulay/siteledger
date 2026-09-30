@@ -147,6 +147,16 @@ export function ProjectReports() {
         title="Reports"
         subtitle={project?.project_name}
         backTo={`/projects/${projectId}`}
+        info={{
+          title: 'Project PDF Reports',
+          description: 'Generate and download official PDF statements and financial summaries for this site.',
+          points: [
+            'Financial Summary: 1-page overview of Total Cost, Total Income, Expenses, and Net Balance.',
+            'Income Statement: Complete list of client payments with dates and payment modes.',
+            'Expense Statement: Itemized list of material and labor expenses.',
+            'Share with Client: Print or share directly via WhatsApp to keep clients updated.'
+          ]
+        }}
       />
       <PageWrapper>
         {/* Project Info */}

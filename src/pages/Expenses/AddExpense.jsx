@@ -457,6 +457,18 @@ export function AddExpense({ mode = 'create' }) {
         title={mode === 'edit' ? 'Edit Expense' : 'Add Expense'}
         subtitle={mode === 'edit' ? 'Update expense details' : 'Record a new expense'}
         backTo={location.state?.from === 'dashboard' ? `/projects/${projectId}` : `/projects/${projectId}/expenses`}
+        info={{
+          title: mode === 'edit' ? 'Edit Expense' : 'Record Site Expense',
+          description: 'Record any expenditure for materials, labor wages, machinery, or site utilities.',
+          points: [
+            'Amount: Enter the amount paid (commas formatted automatically as you type).',
+            'Category & Sub-category: Select material or work type (e.g. Cement, Steel, Labor, Transport).',
+            'Quantity (Optional): Add quantity and units (e.g. 50 bags, 2 brass, 10 days).',
+            'Vendor / Supplier: Search saved vendors or type a new vendor name.',
+            'Bill Photo: Take a photo or upload an invoice receipt for easy reference.',
+            'Payment Mode: Track if paid by Cash, UPI, Cheque, or Bank Transfer.'
+          ]
+        }}
       />
       <PageWrapper>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

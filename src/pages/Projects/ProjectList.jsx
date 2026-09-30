@@ -125,6 +125,17 @@ export function ProjectList() {
       <Header
         title={firmName || 'SiteLedger'}
         subtitle="My Projects"
+        info={{
+          title: 'My Projects',
+          description: 'This is your project home screen. It shows all your ongoing and completed construction sites in one place.',
+          points: [
+            'See total income received, expenses spent, and running balance for every site.',
+            'Tap on any project card to open its full dashboard, income, and expenses.',
+            'Click "+ New" to add and start tracking a new construction site.',
+            'Use the search bar to quickly find projects by site name or client.',
+            'Click "PDF" on top right to download a summary report of all projects.'
+          ]
+        }}
         rightAction={
           <div className="flex items-center gap-2">
             <Button

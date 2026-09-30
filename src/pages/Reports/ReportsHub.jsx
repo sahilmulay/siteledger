@@ -29,7 +29,19 @@ export function ReportsHub() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Reports" subtitle="Project Summaries & PDF" />
+      <Header
+        title="Reports"
+        subtitle="Project Summaries & PDF"
+        info={{
+          title: 'Reports Hub',
+          description: 'Overview of financial health across all construction sites of your firm.',
+          points: [
+            'Compare Total Received, Total Expenses, and Net Balance for all projects.',
+            'Tap any project card to generate detailed statements and PDF reports.',
+            'Quickly review total cashflow across your business.'
+          ]
+        }}
+      />
       <PageWrapper>
         {loading ? (
           <div className="space-y-3">{[1,2,3].map(i => <CardSkeleton key={i} />)}</div>

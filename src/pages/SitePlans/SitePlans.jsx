@@ -11,6 +11,7 @@ import { Card } from '../../components/ui/Card'
 import { Input, AmountInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
+import { InfoButton } from '../../components/ui/InfoButton'
 import { Skeleton } from '../../components/ui/Spinner'
 import { formatDate, formatINR, formatIndianAmount, parseIndianAmount } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
@@ -240,6 +241,16 @@ export function SitePlans() {
         title="Site Details"
         subtitle={project?.project_name ? `${project.project_name} (${project.project_code})` : 'Project Plans'}
         backTo={`/projects/${projectId}`}
+        info={{
+          title: 'Site Details & Plans',
+          description: 'Manage construction budgeting, rate per sq ft, extra work charges, and architectural blueprint files.',
+          points: [
+            'Total Construction Cost: Live budget calculation based on Total Area × Rate + Extra Work.',
+            'Extra Work: Add and price additional tasks requested by the client.',
+            'Site Area & Floors: Review plot and floor area breakdown.',
+            'Site Plans & Blueprints: Upload layout drawings and PDF blueprints to view directly on site.'
+          ]
+        }}
       />
 
       <PageWrapper>
@@ -349,8 +360,18 @@ export function SitePlans() {
           {/* 2. Estimated Charges for Extra Work Section */}
           <Card padding="p-4" className="border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2.5">
-              <div>
+              <div className="flex items-center gap-1.5">
                 <h3 className="font-bold text-gray-900 text-sm">Estimated Charges for Extra Work</h3>
+                <InfoButton
+                  title="Extra Work Charges"
+                  description="Record any additional jobs or modifications requested by the client that are outside the original contract."
+                  points={[
+                    'Add items like Compound Wall, False Ceiling, Underground Water Tank, Elevation, etc.',
+                    'Enter the agreed cost for each job.',
+                    'The sum of all extra work is automatically added to Total Construction Cost.'
+                  ]}
+                  size="xs"
+                />
               </div>
               <Button
                 size="sm"
@@ -425,7 +446,18 @@ export function SitePlans() {
           {project && (project.total_area || (project.floor_areas && project.floor_areas.length > 0)) && (
             <Card padding="p-4" className="bg-indigo-50/50 border-indigo-100">
               <div className="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
-                <h3 className="font-bold text-indigo-900 text-sm">Site Area Overview</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-bold text-indigo-900 text-sm">Site Area Overview</h3>
+                  <InfoButton
+                    title="Site Area & Floors"
+                    description="Displays the total built-up construction area and individual floor areas for this site."
+                    points={[
+                      'Total Area (sq ft) is multiplied by Rate per sq ft to calculate the Base Construction Cost.',
+                      'Floor areas can be adjusted anytime from Edit Project.'
+                    ]}
+                    size="xs"
+                  />
+                </div>
                 {project.total_area && (
                   <span className="text-xs font-bold bg-indigo-600 text-white px-2.5 py-1 rounded-full shadow-sm">
                     Total: {project.total_area} sq ft
@@ -478,9 +510,21 @@ export function SitePlans() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
-                Uploaded Plans ({plans.length})
-              </p>
+              <div className="flex items-center gap-1.5 px-1">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Uploaded Plans ({plans.length})
+                </p>
+                <InfoButton
+                  title="Site Plans & Blueprints"
+                  description="Store and view architectural blueprints, floor layouts, and approval PDFs."
+                  points={[
+                    'Upload PDF documents or images directly from your phone.',
+                    'Tap any document to open and view high resolution plans on site.',
+                    'Helps site supervisors and contractors verify dimensions anytime.'
+                  ]}
+                  size="xs"
+                />
+              </div>
               {plans.map(plan => (
                 <Card key={plan.id} padding="p-3.5">
                   <div className="flex items-center gap-3">
