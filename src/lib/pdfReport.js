@@ -521,7 +521,7 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
   if (filterSummary.paymentMode) filterTags.push(`Mode: ${filterSummary.paymentMode}`)
   if (filterSummary.vendorName) filterTags.push(`Vendor: ${filterSummary.vendorName}`)
   if (filterSummary.startDate || filterSummary.endDate) {
-    filterTags.push(`Date: ${filterSummary.startDate || 'Start'} to ${filterSummary.endDate || 'Now'}`)
+    filterTags.push(`Date: ${filterSummary.startDate ? formatDate(filterSummary.startDate) : 'Start'} to ${filterSummary.endDate ? formatDate(filterSummary.endDate) : 'Now'}`)
   }
   if (filterSummary.search) filterTags.push(`Search: "${filterSummary.search}"`)
   const isFiltered = filterTags.length > 0
@@ -859,7 +859,7 @@ export async function generateIncomePDF({ project, income = [], filterSummary = 
   const filterTags = []
   if (filterSummary.paymentMode) filterTags.push(`Mode: ${filterSummary.paymentMode}`)
   if (filterSummary.startDate || filterSummary.endDate) {
-    filterTags.push(`Date: ${filterSummary.startDate || 'Start'} to ${filterSummary.endDate || 'Now'}`)
+    filterTags.push(`Date: ${filterSummary.startDate ? formatDate(filterSummary.startDate) : 'Start'} to ${filterSummary.endDate ? formatDate(filterSummary.endDate) : 'Now'}`)
   }
   if (filterSummary.search) filterTags.push(`Search: "${filterSummary.search}"`)
   const isFiltered = filterTags.length > 0

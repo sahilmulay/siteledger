@@ -14,7 +14,7 @@ import { todayInputDate, formatIndianAmount, parseIndianAmount } from '../../lib
 export function ProjectForm({ mode = 'create' }) {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { createProject, updateProject, fetchProject, loading } = useProjects()
+  const { createProject, updateProject, fetchProject, fetchProjects, loading } = useProjects()
 
   const {
     register, handleSubmit, reset, setValue, watch, control,
@@ -27,6 +27,27 @@ export function ProjectForm({ mode = 'create' }) {
       rate_per_sqft: ''
     }
   })
+
+  // Auto-generate project code (e.g. PR01, PR02) on create
+  useEffect(() => {
+    if (mode === 'create') {
+      fetchProjects().then(projects => {
+        let nextNum = (projects?.length || 0) + 1
+        const prNumbers = (projects || [])
+          .map(p => {
+            const match = p.project_code?.match(/^PR-?0*(\d+)$/i)
+            return match ? parseInt(match[1], 10) : null
+          })
+          .filter(n => n !== null && !isNaN(n))
+
+        if (prNumbers.length > 0) {
+          nextNum = Math.max(Math.max(...prNumbers) + 1, nextNum)
+        }
+        const autoCode = `PR${String(nextNum).padStart(2, '0')}`
+        setValue('project_code', autoCode, { shouldValidate: true })
+      })
+    }
+  }, [mode, fetchProjects, setValue])
 
   const watchFloors = watch('number_of_floors')
 

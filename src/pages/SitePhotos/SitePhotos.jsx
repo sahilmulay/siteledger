@@ -6,6 +6,7 @@ import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Skeleton } from '../../components/ui/Spinner'
 import { supabase } from '../../lib/supabase'
+import { formatDate } from '../../lib/formatters'
 import toast from 'react-hot-toast'
 
 export function SitePhotos() {
@@ -112,13 +113,9 @@ export function SitePhotos() {
     }
   }
 
-  // Group photos by human-readable date
+  // Group photos by human-readable date (DD/MM/YYYY)
   const grouped = photos.reduce((acc, p) => {
-    const day = new Date(p.taken_at).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    })
+    const day = formatDate(p.taken_at)
     if (!acc[day]) acc[day] = []
     acc[day].push(p)
     return acc
@@ -248,10 +245,7 @@ export function SitePhotos() {
               className="max-w-full max-h-[82vh] rounded-2xl object-contain shadow-2xl"
             />
             <div className="text-white text-center mt-3 text-xs bg-black/40 px-3 py-1.5 rounded-full">
-              📅 {new Date(preview.taken_at).toLocaleString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
+              📅 {formatDate(preview.taken_at)} at {new Date(preview.taken_at).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit'
               })}

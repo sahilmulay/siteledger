@@ -21,6 +21,13 @@ export function formatINR(amount, showDecimals = false) {
 export function formatDate(dateString) {
   if (!dateString) return '—'
   try {
+    if (typeof dateString === 'string') {
+      const trimmed = dateString.trim()
+      const ymdMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/)
+      if (ymdMatch) {
+        return `${ymdMatch[3]}/${ymdMatch[2]}/${ymdMatch[1]}`
+      }
+    }
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString
     if (!isValid(date)) return '—'
     return format(date, 'dd/MM/yyyy')
@@ -30,17 +37,10 @@ export function formatDate(dateString) {
 }
 
 /**
- * Format date as DD MMM YYYY (e.g. 23 Sep 2026)
+ * Format date as DD/MM/YYYY
  */
 export function formatDateLong(dateString) {
-  if (!dateString) return '—'
-  try {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString
-    if (!isValid(date)) return '—'
-    return format(date, 'dd MMM yyyy')
-  } catch {
-    return '—'
-  }
+  return formatDate(dateString)
 }
 
 /**

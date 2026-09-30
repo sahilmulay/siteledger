@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Badge } from '../../components/ui/Badge'
 import { EXPENSE_CATEGORIES } from '../../lib/constants'
 import { supabase } from '../../lib/supabase'
+import { formatDate } from '../../lib/formatters'
 import { parseContactNumbers } from '../../lib/contactHelper'
 import { PhoneChoiceModal } from '../../components/ui/PhoneChoiceModal'
 import toast from 'react-hot-toast'
@@ -161,6 +162,9 @@ export function Settings() {
 
       const headerRow = rows[0]
       const dataRows = rows.slice(1).sort((a, b) => new Date(b[0]) - new Date(a[0]))
+      dataRows.forEach(r => {
+        if (r[0]) r[0] = formatDate(r[0])
+      })
       const allRows = [headerRow, ...dataRows]
 
       // Format as CSV with UTF-8 BOM and formula injection neutralization

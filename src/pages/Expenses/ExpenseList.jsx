@@ -328,7 +328,7 @@ Thank you!`
             )}
             {(filters.startDate || filters.endDate) && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                {filters.startDate || 'Start'} → {filters.endDate || 'Now'} <X className="h-3 w-3 cursor-pointer" onClick={() => applyFilters({ ...filters, startDate: '', endDate: '' })} />
+                {filters.startDate ? formatDate(filters.startDate) : 'Start'} → {filters.endDate ? formatDate(filters.endDate) : 'Now'} <X className="h-3 w-3 cursor-pointer" onClick={() => applyFilters({ ...filters, startDate: '', endDate: '' })} />
               </span>
             )}
             <button
