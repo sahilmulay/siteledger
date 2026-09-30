@@ -44,6 +44,35 @@ export function formatDateLong(dateString) {
 }
 
 /**
+ * Format time in 12-hour format with am or pm (e.g. "02:30 pm", "11:15 am")
+ */
+export function formatTime(dateString) {
+  if (!dateString) return ''
+  try {
+    if (typeof dateString === 'string') {
+      const trimmed = dateString.trim()
+      // If it is only date (YYYY-MM-DD) without time component, return empty
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return ''
+    }
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+    if (!isValid(date) || isNaN(date.getTime())) return ''
+    return format(date, 'hh:mm a').toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Format date & time as DD/MM/YYYY at hh:mm am/pm
+ */
+export function formatDateTime(dateString) {
+  if (!dateString) return '—'
+  const d = formatDate(dateString)
+  const t = formatTime(dateString)
+  return t ? `${d} at ${t}` : d
+}
+
+/**
  * Convert date to input[type=date] format YYYY-MM-DD
  */
 export function toInputDate(dateString) {

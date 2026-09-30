@@ -13,7 +13,7 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { InfoButton } from '../../components/ui/InfoButton'
 import { Skeleton } from '../../components/ui/Spinner'
-import { formatDate, formatINR, formatIndianAmount, parseIndianAmount } from '../../lib/formatters'
+import { formatDate, formatTime, formatINR, formatIndianAmount, parseIndianAmount } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -534,7 +534,7 @@ export function SitePlans() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">{plan.file_name}</p>
                       <p className="text-xs text-gray-400">
-                        <span className="font-semibold text-blue-600">{plan.file_type}</span> · {formatDate(plan.created_at)}
+                        <span className="font-semibold text-blue-600">{plan.file_type}</span> · {formatDate(plan.created_at)}{plan.created_at && formatTime(plan.created_at) ? ` at ${formatTime(plan.created_at)}` : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">

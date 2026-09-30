@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { formatDate, formatDateLong } from './formatters'
+import { formatDate, formatDateLong, formatTime } from './formatters'
 
 /**
  * Format currency cleanly for PDF without Unicode font glitches
@@ -46,7 +46,7 @@ export async function generateProjectPDF({ project, stats, income, expenses, fir
 
   // Date on the right
   doc.setFontSize(8.5)
-  doc.text(`Generated: ${formatDateLong(new Date().toISOString())}`, pageW - margin, y + 4, { align: 'right' })
+  doc.text(`Generated: ${formatDate(new Date())} at ${formatTime(new Date())}`, pageW - margin, y + 4, { align: 'right' })
   doc.text(`Project Code: ${project.project_code}`, pageW - margin, y + 10, { align: 'right' })
 
   // Subtle divider line
@@ -330,7 +330,7 @@ export async function generateAllProjectsPDF({ projects = [], stats = {}, firmNa
   doc.text('Master Projects Financial Summary', margin, y + 10)
 
   doc.setFontSize(8.5)
-  doc.text(`Generated: ${formatDateLong(new Date().toISOString())}`, pageW - margin, y + 4, { align: 'right' })
+  doc.text(`Generated: ${formatDate(new Date())} at ${formatTime(new Date())}`, pageW - margin, y + 4, { align: 'right' })
   doc.text(`Total Projects: ${projects.length}`, pageW - margin, y + 10, { align: 'right' })
 
   y += 15
@@ -539,7 +539,7 @@ export async function generateFilteredExpensesPDF({ project, expenses = [], filt
 
   // Right side meta
   doc.setFontSize(8.5)
-  doc.text(`Generated: ${formatDateLong(new Date().toISOString())}`, pageW - margin, y + 4, { align: 'right' })
+  doc.text(`Generated: ${formatDate(new Date())} at ${formatTime(new Date())}`, pageW - margin, y + 4, { align: 'right' })
   doc.text(`Project: ${project?.project_code || '—'} · ${project?.project_name || ''}`, pageW - margin, y + 10, { align: 'right' })
 
   y += 15
@@ -723,7 +723,7 @@ export async function generateSingleExpenseVoucherPDF({ project, expense, firmNa
   doc.setFontSize(8.5)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...DARK_GRAY)
-  doc.text(`Date: ${formatDateLong(expense.expense_date)}`, pageW - margin - pad, curY + 9, { align: 'right' })
+  doc.text(`Date: ${formatDateLong(expense.expense_date)}${expense.created_at && formatTime(expense.created_at) ? ` at ${formatTime(expense.created_at)}` : ''}`, pageW - margin - pad, curY + 9, { align: 'right' })
 
   curY += 15
   doc.setDrawColor(...LINE_COLOR)
@@ -877,7 +877,7 @@ export async function generateIncomePDF({ project, income = [], filterSummary = 
 
   // Right side meta
   doc.setFontSize(8.5)
-  doc.text(`Generated: ${formatDateLong(new Date().toISOString())}`, pageW - margin, y + 4, { align: 'right' })
+  doc.text(`Generated: ${formatDate(new Date())} at ${formatTime(new Date())}`, pageW - margin, y + 4, { align: 'right' })
   doc.text(`Project: ${project?.project_code || '—'} · ${project?.project_name || ''}`, pageW - margin, y + 10, { align: 'right' })
 
   y += 15

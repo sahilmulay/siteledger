@@ -18,7 +18,7 @@ import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { CardSkeleton } from '../../components/ui/Spinner'
-import { formatINR, formatDate } from '../../lib/formatters'
+import { formatINR, formatDate, formatTime } from '../../lib/formatters'
 import { EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../lib/constants'
 import { generateFilteredExpensesPDF, generateSingleExpenseVoucherPDF } from '../../lib/pdfReport'
 import toast from 'react-hot-toast'
@@ -210,7 +210,7 @@ export function ExpenseList() {
 ━━━━━━━━━━━━━━━━━━━━
 *From:* ${firmName || 'SiteLedger'}
 *Project:* ${project?.project_name || 'Project'} (${project?.project_code || '—'})
-*Date:* ${formatDate(item.expense_date)}
+*Date:* ${formatDate(item.expense_date)}${item.created_at && formatTime(item.created_at) ? ` (${formatTime(item.created_at)})` : ''}
 
 *Paid To:* ${item.vendor_name || 'Vendor'}
 *Total Paid:* Rs. ${Number(item.amount).toLocaleString('en-IN')}
@@ -422,7 +422,7 @@ Thank you!`
                 <div className="space-y-2">
                   {items.map(item => {
                     const vendorMobile = item.vendor_mobile || (item.remarks?.match(/Phone:\s*(\d{10})/)?.[1])
-                    const timeString = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    const timeString = formatTime(item.created_at)
                     
                     return (
                       <Card key={item.id} className="p-3 shadow-sm hover:shadow-md transition-shadow">

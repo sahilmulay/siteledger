@@ -13,7 +13,7 @@ import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { CardSkeleton } from '../../components/ui/Spinner'
-import { formatINR, formatDate } from '../../lib/formatters'
+import { formatINR, formatDate, formatTime } from '../../lib/formatters'
 import { PAYMENT_MODES } from '../../lib/constants'
 import toast from 'react-hot-toast'
 
@@ -251,6 +251,11 @@ export function IncomeList() {
                       <p className="text-xs text-gray-400 mt-1">Ref: {item.transaction_reference}</p>
                     )}
                     {item.remarks && <p className="text-sm text-gray-600 mt-1">{item.remarks}</p>}
+                    {item.created_at && formatTime(item.created_at) && (
+                      <div className="text-[10px] font-medium text-emerald-700 mt-2 pt-1.5 border-t border-gray-50">
+                        Entry by You <span className="text-gray-400 font-normal">at {formatTime(item.created_at)}</span>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => setDeleteTarget(item.id)}

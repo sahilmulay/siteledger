@@ -6,7 +6,7 @@ import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Skeleton } from '../../components/ui/Spinner'
 import { supabase } from '../../lib/supabase'
-import { formatDate } from '../../lib/formatters'
+import { formatDate, formatTime } from '../../lib/formatters'
 import toast from 'react-hot-toast'
 
 export function SitePhotos() {
@@ -223,7 +223,7 @@ export function SitePhotos() {
                         </button>
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 rounded-b-xl pointer-events-none">
                           <p className="text-[10px] text-white text-center font-medium">
-                            {new Date(photo.taken_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            {formatTime(photo.taken_at)}
                           </p>
                         </div>
                       </div>
@@ -255,10 +255,7 @@ export function SitePhotos() {
               className="max-w-full max-h-[82vh] rounded-2xl object-contain shadow-2xl"
             />
             <div className="text-white text-center mt-3 text-xs bg-black/40 px-3 py-1.5 rounded-full">
-              📅 {formatDate(preview.taken_at)} at {new Date(preview.taken_at).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              📅 {formatDate(preview.taken_at)} at {formatTime(preview.taken_at)}
             </div>
           </div>
         </div>
