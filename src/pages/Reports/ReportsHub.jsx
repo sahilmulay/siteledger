@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart2, FileText } from 'lucide-react'
+import { BarChart2, FileText, Calendar } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
@@ -8,7 +8,7 @@ import { Card } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/Badge'
 import { CardSkeleton } from '../../components/ui/Spinner'
 import { EmptyState } from '../../components/ui/EmptyState'
-import { formatINR } from '../../lib/formatters'
+import { formatINR, formatDate } from '../../lib/formatters'
 
 export function ReportsHub() {
   const navigate = useNavigate()
@@ -47,12 +47,12 @@ export function ReportsHub() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                          {p.project_code}
-                        </span>
-                        <StatusBadge status={p.project_status} />
-                      </div>
+                      {(p.start_date || p.created_at) && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                          <span>Start Date: <strong className="font-semibold text-gray-800">{formatDate(p.start_date || p.created_at)}</strong></span>
+                        </div>
+                      )}
                       <h3 className="font-semibold text-gray-900">{p.project_name}</h3>
                       <p className="text-sm text-gray-500">{p.owner_name}</p>
                     </div>

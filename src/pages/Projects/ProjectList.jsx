@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Plus, Search, FolderOpen, Filter, Download } from 'lucide-react'
+import { Plus, Search, FolderOpen, Filter, Download, Calendar } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from '../../components/layout/Header'
@@ -207,14 +207,14 @@ export function ProjectList() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                          {project.project_code}
-                        </span>
-                        <StatusBadge status={project.project_status} />
-                      </div>
-                      <h3 className="font-bold text-gray-900 mt-1 text-base leading-tight">{project.project_name}</h3>
-                      <p className="text-sm text-gray-500">{project.owner_name}</p>
+                      {(project.start_date || project.created_at) && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                          <span>Start Date: <strong className="font-semibold text-gray-800">{formatDate(project.start_date || project.created_at)}</strong></span>
+                        </div>
+                      )}
+                      <h3 className="font-bold text-gray-900 text-base leading-tight">{project.project_name}</h3>
+                      <p className="text-sm text-gray-500 mt-0.5">{project.owner_name}</p>
                     </div>
                   </div>
 
