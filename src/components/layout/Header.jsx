@@ -12,30 +12,42 @@ export function Header({ title, subtitle, backTo, rightAction, backLabel, badge,
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
-      <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3 min-h-[60px]">
+      <div className="max-w-lg mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 min-h-[56px] sm:min-h-[60px]">
         {(backTo !== undefined || backLabel !== undefined) && (
           <button
             onClick={handleBack}
-            className="p-2 -ml-2 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors flex-shrink-0"
             aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5 text-gray-700" />
           </button>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-lg font-bold text-gray-900 truncate leading-tight">{title}</h1>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate leading-tight">{title}</h1>
             {badge && <div className="flex-shrink-0">{badge}</div>}
-            {info && (
+            {!subtitle && info && (
               <InfoButton
                 title={typeof info === 'object' && info.title ? info.title : (typeof title === 'string' ? title : 'Information')}
                 description={typeof info === 'object' ? info.description : info}
                 points={typeof info === 'object' ? info.points : []}
-                size="sm"
+                size="xs"
               />
             )}
           </div>
-          {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
+          {subtitle && (
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <p className="text-xs text-gray-500 truncate min-w-0 flex-1">{subtitle}</p>
+              {info && (
+                <InfoButton
+                  title={typeof info === 'object' && info.title ? info.title : (typeof title === 'string' ? title : 'Information')}
+                  description={typeof info === 'object' ? info.description : info}
+                  points={typeof info === 'object' ? info.points : []}
+                  size="xs"
+                />
+              )}
+            </div>
+          )}
         </div>
         {rightAction && <div className="flex-shrink-0">{rightAction}</div>}
       </div>

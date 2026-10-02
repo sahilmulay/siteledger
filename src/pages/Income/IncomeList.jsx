@@ -148,19 +148,19 @@ export function IncomeList() {
           ]
         }}
         rightAction={
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               onClick={handleDownloadPDF}
               disabled={downloadingPDF || filteredIncome.length === 0}
-              className="p-2 rounded-xl hover:bg-gray-100 disabled:opacity-40 transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 disabled:opacity-40 transition-colors"
               title="Download Income PDF"
             >
               <Download className="h-4 w-4 text-gray-600" />
             </button>
-            <button onClick={() => setShowFilters(!showFilters)} className="p-2 rounded-xl hover:bg-gray-100" title="Filter Income">
+            <button onClick={() => setShowFilters(!showFilters)} className="p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 transition-colors" title="Filter Income">
               <Filter className="h-4 w-4 text-gray-600" />
             </button>
-            <Button size="sm" onClick={() => navigate(`/projects/${projectId}/income/new`, { state: { from: 'income' } })}>
+            <Button size="sm" className="px-2.5 sm:px-3" onClick={() => navigate(`/projects/${projectId}/income/new`, { state: { from: 'income' } })}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>

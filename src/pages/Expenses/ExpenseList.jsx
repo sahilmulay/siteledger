@@ -275,10 +275,10 @@ Thank you!`
           ]
         }}
         rightAction={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-xl border transition-colors ${
+              className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${
                 (filters.category || filters.subCategory || filters.paymentMode || filters.startDate || filters.endDate || filters.vendorName)
                   ? 'bg-blue-50 border-blue-200 text-blue-600'
                   : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -287,10 +287,9 @@ Thank you!`
             >
               <Filter className="h-4 w-4" />
             </button>
-            <Button size="sm" onClick={() => navigate(`/projects/${projectId}/expenses/new`, { state: { from: 'expenses' } })}>
+            <Button size="sm" className="px-2.5 sm:px-3" onClick={() => navigate(`/projects/${projectId}/expenses/new`, { state: { from: 'expenses' } })}>
               <Plus className="h-4 w-4" />
             </Button>
-
           </div>
         }
       />

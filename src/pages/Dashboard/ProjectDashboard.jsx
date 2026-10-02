@@ -8,7 +8,6 @@ import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { Card } from '../../components/ui/Card'
-import { StatusBadge } from '../../components/ui/Badge'
 import { Skeleton } from '../../components/ui/Spinner'
 import { InfoButton } from '../../components/ui/InfoButton'
 import { formatINR, formatDate } from '../../lib/formatters'
@@ -99,7 +98,6 @@ export function ProjectDashboard() {
     <div className="min-h-screen bg-gray-50">
       <Header
         title={project.project_name}
-        badge={<StatusBadge status={project.project_status} />}
         subtitle={`${project.project_code} · ${project.owner_name}`}
         backTo="/projects"
         info={{
@@ -117,14 +115,14 @@ export function ProjectDashboard() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => navigate(`/projects/${id}/reports`)}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 transition-colors"
               title="PDF Report"
             >
               <FileText className="h-4 w-4 text-gray-600" />
             </button>
             <button
               onClick={() => navigate(`/projects/${id}/edit`)}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 transition-colors"
               title="Edit Project"
             >
               <Edit2 className="h-4 w-4 text-gray-600" />
