@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
-  TrendingUp, TrendingDown, Wallet, ReceiptText,
-  Plus, Edit2, FileText, Image, File as FileIcon, PieChart
+  TrendingUp, TrendingDown, Wallet,
+  Plus, Edit2, FileText, File as FileIcon, PieChart, ChevronRight
 } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects'
 import { Header } from '../../components/layout/Header'
@@ -13,24 +13,32 @@ import { InfoButton } from '../../components/ui/InfoButton'
 import { formatINR, formatDate } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
 
-// ── Clickable Stat Card ─────────────────────────────────────
+// ── Horizontal Rectangular Stat Card ────────────────────────
 function StatCard({ label, value, icon: Icon, color, sub, onClick }) {
   return (
     <button
       onClick={onClick}
+      type="button"
       className={[
-        'text-left w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-100',
-        onClick ? 'active:scale-95 transition-transform cursor-pointer' : ''
+        'text-left w-full bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-gray-100 flex items-center justify-between gap-3',
+        onClick ? 'active:scale-[0.98] transition-all cursor-pointer hover:border-gray-200' : ''
       ].join(' ')}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className={['w-9 h-9 rounded-xl flex items-center justify-center', color].join(' ')}>
+      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+        <div className={['w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm', color].join(' ')}>
           <Icon className="h-5 w-5 text-white" />
         </div>
+        <div className="min-w-0 flex-1">
+          {label && <p className="text-xs font-semibold text-gray-500 truncate">{label}</p>}
+          {value && <p className="text-lg sm:text-xl font-bold text-gray-900 leading-tight truncate mt-0.5">{value}</p>}
+          {sub && <p className="text-[11px] text-gray-400 truncate mt-0.5">{sub}</p>}
+        </div>
       </div>
-      {value && <p className="text-xl font-bold text-gray-900 leading-tight">{value}</p>}
-      {label && <p className="text-xs font-bold text-gray-800 mt-1">{label}</p>}
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {onClick && (
+        <div className="text-gray-300 flex-shrink-0 pr-0.5">
+          <ChevronRight className="h-4 w-4 text-gray-400" />
+        </div>
+      )}
     </button>
   )
 }
@@ -44,7 +52,6 @@ export function ProjectDashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [planCount, setPlanCount] = useState(0)
-  const [photoCount, setPhotoCount] = useState(0)
 
   const loadAll = useCallback(async (force = false) => {
     setLoading(true)
@@ -56,11 +63,9 @@ export function ProjectDashboard() {
       setProject(proj)
       setStats(s)
 
-      // Fetch site plans and photos count
+      // Fetch site plans count
       supabase.from('site_plans').select('id', { count: 'exact', head: true }).eq('project_id', id)
         .then(({ count }) => setPlanCount(count || 0))
-      supabase.from('site_photos').select('id', { count: 'exact', head: true }).eq('project_id', id)
-        .then(({ count }) => setPhotoCount(count || 0))
     } finally {
       setLoading(false)
     }
@@ -107,7 +112,7 @@ export function ProjectDashboard() {
             'Total Received: Total payments and advances collected from the client.',
             'Total Expenses: Total money spent on materials, labor, machinery, and daily site work.',
             'Current Balance: Money in hand (Received minus Expenses).',
-            'Stat Cards: Tap any card to view detailed records, plans, photos, charts, or reports.',
+            'Stat Cards: Tap any card to view detailed records, plans, charts, or reports.',
             'Quick Action: Use the green "Add Income" and red "Add Expense" buttons at the bottom for instant entries.'
           ]
         }}
@@ -138,13 +143,14 @@ export function ProjectDashboard() {
         )}
 
         <div className="pb-32">
-          {/* Summary Cards Grid (6 cards) */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Rectangular Summary Cards */}
+          <div className="space-y-2.5 mb-5">
             <StatCard
               label="Total Received"
               value={formatINR(stats?.totalReceived)}
               icon={TrendingUp}
               color="bg-green-500"
+              sub="Tap to view client payments & advances"
               onClick={() => navigate(`/projects/${id}/income`)}
             />
             <StatCard
@@ -152,6 +158,7 @@ export function ProjectDashboard() {
               value={formatINR(stats?.totalExpenses)}
               icon={TrendingDown}
               color="bg-red-500"
+              sub={stats?.lastTransactionDate ? `Last: ${formatDate(stats.lastTransactionDate)} · Tap for list` : 'Tap to view all expenses'}
               onClick={() => navigate(`/projects/${id}/expenses`)}
             />
             <StatCard
@@ -159,44 +166,30 @@ export function ProjectDashboard() {
               value={formatINR(balance)}
               icon={Wallet}
               color={balance >= 0 ? 'bg-blue-600' : 'bg-orange-500'}
+              sub={balance >= 0 ? 'Net Available Balance' : 'Negative Cashflow / Overspent'}
             />
             <StatCard
-              label="Expense Entries"
-              value={stats?.expenseCount || 0}
-              icon={ReceiptText}
-              color="bg-purple-500"
-              sub={stats?.lastTransactionDate ? `Last: ${formatDate(stats.lastTransactionDate)}` : 'No transactions'}
-              onClick={() => navigate(`/projects/${id}/expenses`)}
-            />
-            <StatCard
-              value="Site Details"
+              label="Site Details"
+              value="Site & Area Details"
               icon={FileIcon}
               color="bg-sky-500"
-              sub={planCount > 0 ? `${planCount} plan${planCount !== 1 ? 's' : ''}` : 'Tap to view / upload'}
+              sub={planCount > 0 ? `${planCount} site plan${planCount !== 1 ? 's' : ''} & budget` : 'Budget, extra work & site plans'}
               onClick={() => navigate(`/projects/${id}/plans`)}
             />
             <StatCard
-              label="Site Photos"
-              value={photoCount}
-              icon={Image}
-              color="bg-pink-500"
-              sub={photoCount === 0 ? 'Tap to view / add' : `${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
-              onClick={() => navigate(`/projects/${id}/photos`)}
-            />
-            <StatCard
               label="Expense Charts"
-              value="Pie Charts"
+              value="Category Breakdown"
               icon={PieChart}
               color="bg-indigo-600"
-              sub="Category & Sub-cat"
+              sub="Visual pie charts for labor, materials & more"
               onClick={() => navigate(`/projects/${id}/charts`)}
             />
             <StatCard
               label="PDF Reports"
-              value="Statements"
+              value="Statements & Summaries"
               icon={FileText}
               color="bg-teal-600"
-              sub="Download & Share"
+              sub="Download & share full project reports"
               onClick={() => navigate(`/projects/${id}/reports`)}
             />
           </div>

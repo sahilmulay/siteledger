@@ -10,6 +10,8 @@
 - Site Photos and Site Plans (blueprint) storage.
 - Strict mobile UI layout optimizations (header truncations resolved, compact action buttons).
 - Information tooltips for all main screens.
+- Dashboard Rectangular Cards Layout (replaced small cube cards with wide horizontal rectangles for mobile view).
+- Site Details Simplification (Site Overview moved to top, Base Construction renamed to Construction Cost, Estimated Extra Work renamed to Extra Work Cost, and expense history/site photos removed from dashboard).
 
 ## Features In Progress
 - Resolving security audit findings related to Supabase caching and storage access (CodeRabbit report).

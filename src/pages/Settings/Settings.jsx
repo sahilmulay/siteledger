@@ -893,6 +893,28 @@ export function Settings() {
           </div>
         </Card>
 
+        {/* Legal & Support */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Shield className="h-4 w-4 text-blue-600" />
+            Legal & Support
+          </h3>
+          <div className="space-y-1">
+            <button
+              onClick={() => navigate('/privacy')}
+              className="w-full flex items-center justify-between p-3 text-sm text-gray-700 hover:bg-gray-50 rounded-xl transition-colors text-left"
+            >
+              <span>Privacy Policy</span>
+            </button>
+            <button
+              onClick={() => navigate('/terms')}
+              className="w-full flex items-center justify-between p-3 text-sm text-gray-700 hover:bg-gray-50 rounded-xl transition-colors text-left"
+            >
+              <span>Terms of Service</span>
+            </button>
+          </div>
+        </div>
+
         {/* Sign Out */}
         <div className="pb-4">
           <Button

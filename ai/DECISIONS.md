@@ -29,3 +29,20 @@ This file tracks specific, atomic decisions made during the development of SiteL
 **Context:** Need a way for AI coding assistants to maintain long-term context across multiple sessions, server restarts, and model updates.
 **Decision:** Establish an `/ai` directory at the project root containing `PROJECT_RULES.md`, `CURRENT_STATUS.md`, `CHANGELOG.md`, `SESSION_CONTEXT.md`, etc. An explicit rule requires the AI to update `SESSION_CONTEXT.md` after every completed task.
 **Status:** Implemented and enforced via `PROJECT_RULES.md`.
+
+## Dec-006: CashBook UI System & Dual Desktop/Mobile Experience
+**Context:** Need an industry-standard, high-legibility digital ledger & khata interface inspired by cashbook.in, supporting both full desktop screens and mobile handheld usage without breaking existing Supabase business logic.
+**Decision:** 
+- Visual Tokens: Royal Indigo (`#4F46E5`), Emerald Green (`#10B981`) for Cash In, Coral Red (`#EF4444`) for Cash Out, Soft Slate (`#F8FAFC`), Plus Jakarta Sans typography with `tabular-nums` for numeric figures.
+- Dual Experience: Built a dedicated Desktop Ledger Dashboard (Sidebar, Omnisearch `Ctrl+K`, 3 summary metric cards with MoM baseline, audit alert strip, and comprehensive data table with pagination) and Mobile Ledger Dashboard (header with live sync, dual pills, daily grouped feed, sticky bottom CTAs, and an Add Transaction Sheet with numeric keypad).
+- Added a floating `ViewModeSwitcher` (`Auto`, `Desktop`, `Mobile App`) to allow instantaneous localhost previewing and verification without altering production deployment.
+**Status:** Reverted (User preferred original SiteLedger construction ledger UI).
+
+## Dec-007: Rectangular Dashboard Cards & Site Details Simplification
+**Context:** The 2-column square/cube cards on mobile caused cramped text and poor legibility for large Indian currency amounts. Furthermore, the "Site Details" screen was complex, with key site area parameters buried at the bottom and redundant expense history and site photos cards on the dashboard.
+**Decision:** 
+- Converted `StatCard` in `ProjectDashboard.jsx` to full-width horizontal rectangles with left icons, clear numeric values, and right-hand indicators.
+- Removed the duplicate "Expense Entries" card (since "Total Expenses" directly accesses the expense history).
+- Removed the "Site Photos" card from the dashboard.
+- In `SitePlans.jsx`: Reordered sections so "Site Overview" (built-up area & floor breakdown) is at the very top; renamed "Base Construction" to "Construction Cost" and "Estimated Extra Work" to "Extra Work Cost".
+**Status:** Implemented.

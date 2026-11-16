@@ -256,7 +256,46 @@ export function SitePlans() {
       <PageWrapper>
         <div className="space-y-4 pb-20">
 
-          {/* 1. Total Estimated Construction Cost & Financial Summary Card */}
+          {/* 1. Site Overview Card (Moved to Top) */}
+          {project && (project.total_area || (project.floor_areas && project.floor_areas.length > 0)) && (
+            <Card padding="p-4" className="bg-indigo-50/50 border-indigo-100 shadow-sm">
+              <div className="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-bold text-indigo-900 text-sm">Site Overview</h3>
+                  <InfoButton
+                    title="Site Overview & Floors"
+                    description="Displays the total built-up construction area and individual floor areas for this site."
+                    points={[
+                      'Total Area (sq ft) is multiplied by Rate per sq ft to calculate the Construction Cost.',
+                      'Floor areas can be adjusted anytime from Edit Project.'
+                    ]}
+                    size="xs"
+                  />
+                </div>
+                {project.total_area && (
+                  <span className="text-xs font-bold bg-indigo-600 text-white px-2.5 py-1 rounded-full shadow-sm">
+                    Total: {project.total_area} sq ft
+                  </span>
+                )}
+              </div>
+              
+              {project.floor_areas && project.floor_areas.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-indigo-800/70 uppercase tracking-wide">Floor Details</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {project.floor_areas.map((f, i) => (
+                      <div key={i} className="bg-white rounded-lg p-2.5 shadow-sm border border-indigo-50 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-700 truncate mr-2">{f.floor_name || `Floor ${i+1}`}</span>
+                        <span className="text-xs font-bold text-indigo-700 whitespace-nowrap">{f.area} sq ft</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* 2. Total Construction Cost & Financial Summary Card */}
           <Card padding="p-4" className="bg-white border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
@@ -296,17 +335,17 @@ export function SitePlans() {
             {/* Formula Breakdown Card */}
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-200/80 space-y-2 text-xs mb-3">
               <div className="flex items-center justify-between text-gray-600">
-                <span>Base Construction</span>
+                <span>Construction Cost</span>
                 <span className="font-semibold text-gray-900">{formatINR(baseConstructionCost)}</span>
               </div>
               <div className="flex items-center justify-between text-gray-600">
                 <span>
-                  Estimated Extra Work ({extraWorks.length} {extraWorks.length === 1 ? 'item' : 'items'})
+                  Extra Work Cost ({extraWorks.length} {extraWorks.length === 1 ? 'item' : 'items'})
                 </span>
                 <span className="font-semibold text-indigo-600">+ {formatINR(totalExtraWorkCost)}</span>
               </div>
               <div className="border-t border-gray-200 pt-1.5 flex items-center justify-between text-sm font-bold">
-                <span className="text-gray-900">Total Estimated Cost</span>
+                <span className="text-gray-900">Total Construction Cost</span>
                 <span className="text-blue-600">{formatINR(totalEstimatedCost)}</span>
               </div>
             </div>
@@ -357,13 +396,13 @@ export function SitePlans() {
             </div>
           </Card>
 
-          {/* 2. Estimated Charges for Extra Work Section */}
+          {/* 3. Extra Work Cost Section */}
           <Card padding="p-4" className="border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2.5">
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-gray-900 text-sm">Estimated Charges for Extra Work</h3>
+                <h3 className="font-bold text-gray-900 text-sm">Extra Work Cost</h3>
                 <InfoButton
-                  title="Extra Work Charges"
+                  title="Extra Work Cost"
                   description="Record any additional jobs or modifications requested by the client that are outside the original contract."
                   points={[
                     'Add items like Compound Wall, False Ceiling, Underground Water Tank, Elevation, etc.',
@@ -435,51 +474,12 @@ export function SitePlans() {
                 ))}
 
                 <div className="flex items-center justify-between pt-2 px-1 border-t border-gray-100 text-xs font-semibold">
-                  <span className="text-gray-600">Total Extra Work:</span>
+                  <span className="text-gray-600">Total Extra Work Cost:</span>
                   <span className="text-indigo-700 font-bold text-sm">{formatINR(totalExtraWorkCost)}</span>
                 </div>
               </div>
             )}
           </Card>
-
-          {/* 3. Site Area Overview Card */}
-          {project && (project.total_area || (project.floor_areas && project.floor_areas.length > 0)) && (
-            <Card padding="p-4" className="bg-indigo-50/50 border-indigo-100">
-              <div className="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="font-bold text-indigo-900 text-sm">Site Area Overview</h3>
-                  <InfoButton
-                    title="Site Area & Floors"
-                    description="Displays the total built-up construction area and individual floor areas for this site."
-                    points={[
-                      'Total Area (sq ft) is multiplied by Rate per sq ft to calculate the Base Construction Cost.',
-                      'Floor areas can be adjusted anytime from Edit Project.'
-                    ]}
-                    size="xs"
-                  />
-                </div>
-                {project.total_area && (
-                  <span className="text-xs font-bold bg-indigo-600 text-white px-2.5 py-1 rounded-full shadow-sm">
-                    Total: {project.total_area} sq ft
-                  </span>
-                )}
-              </div>
-              
-              {project.floor_areas && project.floor_areas.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-indigo-800/70 uppercase tracking-wide">Floor Details</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {project.floor_areas.map((f, i) => (
-                      <div key={i} className="bg-white rounded-lg p-2.5 shadow-sm border border-indigo-50 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-700 truncate mr-2">{f.floor_name || `Floor ${i+1}`}</span>
-                        <span className="text-xs font-bold text-indigo-700 whitespace-nowrap">{f.area} sq ft</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
 
           {/* 4. Upload Site Plan Card */}
           <input
@@ -639,7 +639,7 @@ export function SitePlans() {
             placeholder="e.g. 1,500"
             value={rateInput}
             onChange={(val) => setRateInput(val)}
-            hint="Used to calculate base construction cost = Total Area × Rate"
+            hint="Used to calculate construction cost = Total Area × Rate"
             autoFocus
           />
           <div className="flex gap-2 pt-2">
@@ -675,16 +675,16 @@ export function SitePlans() {
             Below is the complete step-by-step breakdown of how all totals, extra works, and outstanding balances are calculated for this project:
           </p>
 
-          {/* Formula 1: Base Construction Cost */}
+          {/* Formula 1: Construction Cost */}
           <div className="p-3.5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="font-bold text-xs uppercase tracking-wider text-gray-700">
-                1. Base Construction Cost
+                1. Construction Cost
               </span>
               <span className="font-bold text-gray-900">{formatINR(baseConstructionCost)}</span>
             </div>
             <div className="text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 text-blue-700 font-semibold">
-              Base Cost = Total Area (sq ft) × Rate per sq ft
+              Construction Cost = Total Area (sq ft) × Rate per sq ft
             </div>
             <div className="text-xs text-gray-600 flex items-center justify-between pt-1">
               <span>Current Values:</span>
@@ -694,16 +694,16 @@ export function SitePlans() {
             </div>
           </div>
 
-          {/* Formula 2: Estimated Extra Work Charges */}
+          {/* Formula 2: Extra Work Cost */}
           <div className="p-3.5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="font-bold text-xs uppercase tracking-wider text-gray-700">
-                2. Extra Work Charges
+                2. Extra Work Cost
               </span>
               <span className="font-bold text-indigo-700">+{formatINR(totalExtraWorkCost)}</span>
             </div>
             <div className="text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 text-indigo-700 font-semibold">
-              Extra Work = Sum of all individual extra work items
+              Extra Work Cost = Sum of all individual extra work items
             </div>
             <div className="text-xs text-gray-600 pt-1 space-y-1">
               <div className="flex items-center justify-between">
@@ -736,7 +736,7 @@ export function SitePlans() {
               <span className="font-extrabold text-blue-700 text-base">{formatINR(totalEstimatedCost)}</span>
             </div>
             <div className="text-xs font-mono bg-white px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-800 font-semibold">
-              Total Cost = Base Construction Cost + Extra Work Charges
+              Total Cost = Construction Cost + Extra Work Cost
             </div>
             <div className="text-xs text-blue-950 flex items-center justify-between pt-1">
               <span>Calculation:</span>

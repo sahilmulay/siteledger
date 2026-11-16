@@ -2,12 +2,46 @@
 
 ## 🤖 AI Update Process
 **CRITICAL INSTRUCTION FOR ALL AI ASSISTANTS:**
-Any time a code change is made, or a task is completed, you MUST automatically update the following files in this `/ai` directory:
-1. `SESSION_CONTEXT.md` - MUST be updated after EVERY completed task to reflect the current state, focus, and next steps.
-2. `CHANGELOG.md` - Log the changes made, categorized by `Added`, `Changed`, `Fixed`, or `Removed`.
-3. `CURRENT_STATUS.md` - Update the "Completed", "In Progress", or "Known Issues" sections if the task changes the state of the project.
-4. `AI_MEMORY.md` - Update ONLY if the task involved an architectural decision, security fix, or major performance optimization.
-5. `DECISIONS.md` - Update ONLY when a new distinct architectural, technical, or design decision is made.
+After completing ANY task, you must automatically update documentation:
+
+### CHANGELOG.md
+Record: Added, Changed, Fixed, Removed
+
+### CURRENT_STATUS.md
+Update: Completed Features, Features In Progress, Known Issues, Pending Improvements
+
+### SESSION_CONTEXT.md
+Update: Recent Actions Completed, Current Focus, Immediate Next Steps. (MUST be updated after EVERY completed task)
+
+### AI_MEMORY.md
+Update ONLY if:
+- Architecture changed
+- Security decisions changed
+- Performance optimizations were added
+- Important technical lessons were learned
+
+### DECISIONS.md
+Create a new ADR entry whenever a design/technology choice is made, a workflow changes, or a previous decision is reversed.
+Format:
+## Dec-XXX: Title
+**Context:** Why the issue existed
+**Decision:** What was chosen
+**Reason:** Why it was selected
+**Status:** Implemented / Pending / Rejected
+
+### DATABASE_SCHEMA.md
+Update whenever tables, columns, RLS, or storage structures change.
+
+### PROJECT_CONTEXT.md
+Update whenever major features are added, architecture changes, or new external services are introduced.
+
+**General Rules for Documentation:**
+- Never delete historical information.
+- Preserve previous decisions.
+- Append instead of overwrite whenever possible.
+- Keep documentation concise and factual.
+- Documentation must always represent the current state of the project.
+- If documentation becomes outdated, update it before completing the task.
 
 ## Documentation Governance
 - The `/ai` directory is the project's single source of truth.

@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { BottomNav } from './components/layout/BottomNav'
 import { PageLoader } from './components/ui/Spinner'
+import { OfflineIndicator } from './components/ui/OfflineIndicator'
 
 import { ErrorBoundary } from './components/layout/ErrorBoundary'
 
@@ -43,17 +44,25 @@ const SitePlans = lazyWithRetry(() => import('./pages/SitePlans/SitePlans').then
 const SitePhotos = lazyWithRetry(() => import('./pages/SitePhotos/SitePhotos').then(m => ({ default: m.SitePhotos })))
 const ExpenseCharts = lazyWithRetry(() => import('./pages/Charts/ExpenseCharts').then(m => ({ default: m.ExpenseCharts })))
 const Settings = lazyWithRetry(() => import('./pages/Settings/Settings').then(m => ({ default: m.Settings })))
+const NotFound = lazyWithRetry(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
+const PrivacyPolicy = lazyWithRetry(() => import('./pages/Legal/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })))
+const TermsOfService = lazyWithRetry(() => import('./pages/Legal/TermsOfService').then(m => ({ default: m.TermsOfService })))
 
 export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
+          <OfflineIndicator />
           <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            
+            {/* Legal routes */}
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
 
             {/* Protected routes */}
             <Route path="/" element={<Navigate to="/projects" replace />} />
@@ -105,8 +114,8 @@ export default function App() {
               <ProtectedRoute><Settings /></ProtectedRoute>
             } />
 
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/projects" replace />} />
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
 
